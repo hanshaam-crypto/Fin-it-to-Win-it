@@ -19,6 +19,7 @@ while running:
             running = False
 
     display.draw_background(screen)
+    display.draw_boat_and_fisherman(screen)
 
     # Update the display
     pygame.display.flip()
