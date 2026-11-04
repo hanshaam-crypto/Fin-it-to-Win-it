@@ -8,7 +8,7 @@ SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 700
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Fin It to Win It!")
+pygame.display.set_caption("Fin It to Win It! Test Name")
 
 # Game loop
 running = True
