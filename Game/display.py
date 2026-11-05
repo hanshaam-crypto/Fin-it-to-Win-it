@@ -13,6 +13,13 @@ SKY_HEIGHT = 300
 WATER_HEIGHT = 300 
 SAND_HEIGHT = 100
 
+# Score Font global variable
+score_font = None
+
+def setup_fonts():
+    global score_font
+    score_font = pygame.font.SysFont("trebuchetms", 36, bold=True) # font type and size
+
 def draw_background(screen):
     # Draw the sky
     screen.fill(SKY_BLUE)
@@ -40,3 +47,13 @@ def draw_boat_and_fisherman(screen):
 
     # Draw the fisherman's body
     pygame.draw.rect(screen, (40, 100, 180), (488, 240, 24, 35))
+
+def draw_scoreboard(screen, score):
+    # Draw oval scoreboard
+    pygame.draw.ellipse(screen, (220, 245, 255), (775, 20, 190, 65))
+    pygame.draw.ellipse(screen, (60, 130, 170), (775, 20, 190, 65), 3)
+
+    # Draw the score
+    score_text = score_font.render("Score: " + str(score), True, (35, 75, 100))
+    score_rect = score_text.get_rect(center=(870, 52))
+    screen.blit(score_text, score_rect)
