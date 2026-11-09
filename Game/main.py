@@ -2,6 +2,7 @@ import pygame
 import display
 
 pygame.init()
+display.setup_fonts()
 
 # Initializes the game window
 SCREEN_WIDTH = 1000
@@ -20,6 +21,7 @@ while running:
 
     display.draw_background(screen)
     display.draw_boat_and_fisherman(screen)
+    display.draw_scoreboard(screen, 0)
 
     # Update the display
     pygame.display.flip()
