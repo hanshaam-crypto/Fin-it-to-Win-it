@@ -1,12 +1,15 @@
 # This module is for all display related functions
 
 import pygame
+import random # for randomizing the treasurechest positions
 
 # Decorative Images
 orange_coral_image = None
 pink_coral_image = None
 red_coral_image = None
 fisherman_image = None
+treasure_chest_image = None
+treasure_chest_x = None
 
 # Set background colors RGB
 SKY_BLUE = (190, 230, 255)
@@ -49,13 +52,14 @@ def load_image(filename, height):
     return pygame.transform.smoothscale(img, (int(w * height / h), height))
 
 def setup_images():
-
     global orange_coral_image, pink_coral_image
     global red_coral_image, fisherman_image
+    global treasure_chest_image
 
     orange_coral_image = pygame.image.load("Game/images/OrangeCoral.png").convert_alpha()
     pink_coral_image = pygame.image.load("Game/images/PinkCoral.png").convert_alpha()
     red_coral_image = pygame.image.load("Game/images/RedCoral.png").convert_alpha()
+    treasure_chest_image = pygame.image.load("Game/images/TreasureChest.png").convert_alpha()
 
     fisherman_image = pygame.image.load("Game/images/Fisherman.png").convert_alpha()
     # Fade the bottom edge into the water
@@ -85,7 +89,32 @@ def draw_fisherman(screen):
 
     screen.blit(resized_image, fisherman_rect)
 
-# def draw_treasure_cheast(screen):
+def draw_treasure_chest(screen):
+    global treasure_chest_x
+
+    # Resize treasure chest
+    chest_height = 70
+
+    image_width, image_height = treasure_chest_image.get_size()
+
+    resized_image = pygame.transform.smoothscale(
+        treasure_chest_image,
+        (int(image_width * chest_height / image_height), chest_height)
+    )
+
+    # Randomize horizontal position when the game starts
+    if treasure_chest_x is None:
+        half_width = resized_image.get_width() // 2
+        treasure_chest_x = random.randint(
+            half_width, screen.get_width() - half_width
+        )
+
+    # Position treasure chest
+    chest_rectangle = resized_image.get_rect(
+        midbottom=(treasure_chest_x, get_sand_top(screen) + 15)
+    )
+
+    screen.blit(resized_image, chest_rectangle)
 
 # def draw_entity(screen):
 

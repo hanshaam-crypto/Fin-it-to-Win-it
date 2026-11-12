@@ -41,6 +41,7 @@ while running:
     display.draw_background(screen)
     display.draw_fisherman(screen)
     display.draw_decorations(screen)
+    display.draw_treasure_chest(screen)
     scoreboard.draw_scoreboard(screen, 0)
     for fish in fish_list:
         fish.draw(screen)
