@@ -131,26 +131,3 @@ def draw_treasure_chest(screen):
     screen.blit(resized_image, chest_rectangle)
 
 # def draw_obstacles(screen):
-
-def draw_decorations(screen):
-    width = screen.get_width()
-    height = screen.get_height()
-
-    sand_top = get_sand_top(screen)
-
-    # Coral positions based on screen size
-    orange_x = int(width * 0.05)
-    pink_x = int(width * 0.40)
-    red_x = int(width * 0.75)
-
-    coral_y = int(sand_top - 20)
-
-   # Position coral along the bottom of the screen
-    orange_rect = orange_coral_image.get_rect(midbottom=(orange_x, height))
-    pink_rect = pink_coral_image.get_rect(midbottom=(pink_x, height))
-    red_rect = red_coral_image.get_rect(midbottom=(red_x, height))
-
-    # Draw the coral images
-    screen.blit(orange_coral_image, orange_rect)
-    screen.blit(pink_coral_image, pink_rect)
-    screen.blit(red_coral_image, red_rect)
