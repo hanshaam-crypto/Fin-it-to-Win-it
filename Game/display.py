@@ -4,9 +4,6 @@ import pygame
 import random # for randomizing the treasurechest positions
 
 # Image initialization
-orange_coral_image = None
-pink_coral_image = None
-red_coral_image = None
 fisherman_image = None
 treasure_chest_image = None
 treasure_chest_x = None
