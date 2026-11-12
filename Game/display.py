@@ -8,10 +8,9 @@ SKY_BLUE = (190, 230, 255)
 OCEAN_BLUE = (30, 144, 255)
 SAND_YELLOW = (194, 178, 128)
 
-# Set the height of colors
-SKY_HEIGHT = 300
-WATER_HEIGHT = 300 
-SAND_HEIGHT = 100
+# Fractions of the screen height (0.0 = top, 1.0 = bottom)
+HORIZON = 0.42    # water starts 42% of the way down
+SAND = 0.05       # sand is the bottom 5% of the screen
 
 # Score Font global variable
 score_font = None
@@ -20,40 +19,47 @@ def setup_fonts():
     global score_font
     score_font = pygame.font.SysFont("trebuchetms", 36, bold=True) # font type and size
 
+def get_horizon(screen):
+    return int(screen.get_height() * HORIZON)
+
+def get_sand_top(screen):
+    return int(screen.get_height() * (1 - SAND))
+
+#Autoupdate: This function draws the background of the game, including the sky, ocean, and sand.
 def draw_background(screen):
-    # Draw the sky
+    width = screen.get_width()
+    height = screen.get_height()
+    horizon = get_horizon(screen)
+    sand_top = get_sand_top(screen)
+
     screen.fill(SKY_BLUE)
+    pygame.draw.rect(screen, OCEAN_BLUE,  (0, horizon, width, sand_top - horizon))
+    pygame.draw.rect(screen, SAND_YELLOW, (0, sand_top, width, height - sand_top))
 
-    # Draw the water
-    pygame.draw.rect(screen, OCEAN_BLUE, (0, SKY_HEIGHT, 1000, WATER_HEIGHT))
+def get_band(screen, tier):
+    water_top = get_horizon(screen)
+    water_bottom = get_sand_top(screen)
+    third = (water_bottom - water_top) // 3
 
-    # Draw the ocean floor
-    pygame.draw.rect(screen, SAND_YELLOW, (0, SKY_HEIGHT + WATER_HEIGHT, 1000, SAND_HEIGHT))
+    index = {"small": 0, "medium": 1, "large": 2}[tier]
+    band_top = water_top + index * third
+    return band_top, band_top + third
 
-def draw_boat_and_fisherman(screen):
-    # Draw the boat
-    pygame.draw.polygon(screen, (120, 70, 35), [
-        (390, 280),
-        (610, 280),
-        (575, 320),
-        (425, 320)
-    ])
-
-    # Draw the top edge of the boat
-    pygame.draw.line(screen, (75, 45, 25), (390, 280), (610, 280), 5)
-
-    # Draw the fisherman's head
-    pygame.draw.circle(screen, (255, 205, 160), (500, 225), 15)
-
-    # Draw the fisherman's body
-    pygame.draw.rect(screen, (40, 100, 180), (488, 240, 24, 35))
+def load_image(filename, height):
+    img = pygame.image.load("Images/" + filename).convert_alpha()
+    w, h = img.get_size()
+    return pygame.transform.smoothscale(img, (int(w * height / h), height))
 
 def draw_scoreboard(screen, score):
-    # Draw oval scoreboard
-    pygame.draw.ellipse(screen, (220, 245, 255), (775, 20, 190, 65))
-    pygame.draw.ellipse(screen, (60, 130, 170), (775, 20, 190, 65), 3)
+    # Make a rectangle for the board and pin its top-right corner near the screen's top-right
+    board = pygame.Rect(0, 0, 190, 65)
+    board.topright = (screen.get_width() - 20, 20)
 
-    # Draw the score
+    # Draw the oval and its outline inside that rectangle
+    pygame.draw.ellipse(screen, (220, 245, 255), board)
+    pygame.draw.ellipse(screen, (60, 130, 170), board, 3)
+
+    # Draw the score text in the center of the board
     score_text = score_font.render("Score: " + str(score), True, (35, 75, 100))
-    score_rect = score_text.get_rect(center=(870, 52))
+    score_rect = score_text.get_rect(center=board.center)
     screen.blit(score_text, score_rect)
