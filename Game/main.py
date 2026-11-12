@@ -42,7 +42,10 @@ while running:
     screen.blit(boat_img, boat_rect)
     for f in fishes:
         f.draw(screen)
-    display.draw_scoreboard(screen, 0) 
+    display.draw_boat_and_fisherman(screen)
+    display.draw_fish(screen)
+    display.draw_decorations(screen)
+    display.draw_scoreboard(screen, 0)
 
     # Update the display
     pygame.display.flip()
