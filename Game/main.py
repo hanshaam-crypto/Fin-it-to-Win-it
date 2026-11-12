@@ -3,18 +3,18 @@ import display
 import fish
 
 pygame.init()
-display.setup_fonts()
 
-# Initializes the game window
+# Initialize game window
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 950
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Fin It to Win It!")
 
-# Load the Images
-boat_img = display.load_image("FishermanNoHook.png", int(SCREEN_HEIGHT * 0.15))
-boat_rect = boat_img.get_rect(midbottom=(SCREEN_WIDTH // 2, display.get_horizon(screen) + 15))
+# Initialize display settings
+display.setup_fonts()
+display.setup_images()
+
 
 fishes = [
     fish.Fish(screen, "GreyFish.png",       "small"),
@@ -37,15 +37,14 @@ while running:
     for f in fishes:
         f.update()
 
-    # DRAW
+    # # DRAW
     display.draw_background(screen)
-    screen.blit(boat_img, boat_rect)
-    for f in fishes:
-        f.draw(screen)
-    display.draw_boat_and_fisherman(screen)
-    display.draw_fish(screen)
+    display.draw_fisherman(screen)
     display.draw_decorations(screen)
     display.draw_scoreboard(screen, 0)
+    for f in fishes:
+        f.draw(screen)
+    
 
     # Update the display
     pygame.display.flip()

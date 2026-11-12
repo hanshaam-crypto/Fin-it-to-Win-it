@@ -4,7 +4,7 @@ import display
 
 # For each size: (height as a fraction of screen height, speed, points)
 TIERS = {
-    "small":  (0.05, 2, 15),
+    "small":  (0.05, 3, 15),
     "medium": (0.07, 4, 30),
     "large":  (0.09, 6, 50),
 }
@@ -13,7 +13,7 @@ class Fish:
     def __init__(self, screen, filename, tier):
         height_fraction, speed, points = TIERS[tier]
 
-        # Images: the originals all face right, so we also make a mirrored copy
+        # Images: the originals all face right, so make a mirrored copy
         height = int(screen.get_height() * height_fraction)
         self.image_right = display.load_image(filename, height)
         self.image_left = pygame.transform.flip(self.image_right, True, False)

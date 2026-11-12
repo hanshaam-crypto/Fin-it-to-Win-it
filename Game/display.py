@@ -2,30 +2,22 @@
 
 import pygame
 
-# Import Images
-fisherman_image = pygame.image.load("Game/images/Fisherman.png")
-greyfish_image = pygame.image.load("Game/images/GreyFish.png")
-
 # Decorative Images
-orange_coral_image = pygame.image.load("Game/images/OrangeCoral.png")
-pink_coral_image = pygame.image.load("Game/images/PinkCoral.png")
-red_coral_image = pygame.image.load("Game/images/RedCoral.png")
+orange_coral_image = None
+pink_coral_image = None
+red_coral_image = None
+fisherman_image = None
 
-# Resize Images
-fisherman_image = pygame.transform.smoothscale(fisherman_image, (169, 135))
 # Fade the bottom edge of the image into the water
-for y in range(fisherman_image.get_height() - 12, fisherman_image.get_height()):
-    for x in range(fisherman_image.get_width()):
-        r, g, b, a = fisherman_image.get_at((x, y))
-        new_alpha = int(a * (fisherman_image.get_height() - y) / 12)
-        fisherman_image.set_at((x, y), (r, g, b, new_alpha))
+# for y in range(fisherman_image.get_height() - 12, fisherman_image.get_height()):
+#     for x in range(fisherman_image.get_width()):
+#         r, g, b, a = fisherman_image.get_at((x, y))
+#         new_alpha = int(a * (fisherman_image.get_height() - y) / 12)
+#         fisherman_image.set_at((x, y), (r, g, b, new_alpha))
 
-greyfish_image = pygame.transform.smoothscale(greyfish_image, (76, 49))
+# greyfish_image = pygame.transform.smoothscale(greyfish_image, (76, 49))
 
-# Object Movement
-greyfish_x = 0
-greyfish_y = 315
-greyfish_speed = 0.15
+
 
 # Set background colors RGB
 SKY_BLUE = (190, 230, 255)
@@ -70,32 +62,66 @@ def get_band(screen, tier):
     return band_top, band_top + third
 
 def load_image(filename, height):
-    img = pygame.image.load("Images/" + filename).convert_alpha()
+    img = pygame.image.load("Game/images/" + filename).convert_alpha()
     w, h = img.get_size()
     return pygame.transform.smoothscale(img, (int(w * height / h), height))
 
-def draw_boat_and_fisherman(screen):
-    # Draw the boat
-    screen.blit(fisherman_image, (390, 185))
+def setup_images():
 
-def draw_fish(screen):
-    global greyfish_x
+    global orange_coral_image, pink_coral_image
+    global red_coral_image, fisherman_image
 
-    # Move the fish to the right
-    greyfish_x = greyfish_x + greyfish_speed
+    orange_coral_image = pygame.image.load("Game/images/OrangeCoral.png").convert_alpha()
+    pink_coral_image = pygame.image.load("Game/images/PinkCoral.png").convert_alpha()
+    red_coral_image = pygame.image.load("Game/images/RedCoral.png").convert_alpha()
+    fisherman_image = pygame.image.load("Game/images/Fisherman.png").convert_alpha()
 
-    # Restart fish on the left once it leaves the screen
-    if greyfish_x > 1000:
-        greyfish_x = -76
+def draw_fisherman(screen):
 
-    # Draw the fish
-    screen.blit(greyfish_image, (greyfish_x, greyfish_y))
+    # Resize based on screen height (15% of screen height)
+    height = int(screen.get_height() * 0.15)
+
+    w, h = fisherman_image.get_size()
+
+    resized_image = pygame.transform.smoothscale(
+        fisherman_image, (int(w * height / h), height)
+    )
+
+    # Position based on screen width and horizon
+    fisherman_rect = resized_image.get_rect(
+        midbottom=(screen.get_width() // 2, get_horizon(screen) + 15)
+    )
+
+    screen.blit(resized_image, fisherman_rect)
+
+# def draw_treasure_cheast(screen):
+
+# def draw_entity(screen):
+
+# def draw_obstacles(screen):
 
 def draw_decorations(screen):
-    # Draw decorative coral images
-    screen.blit(orange_coral_image, (50, 500))
-    screen.blit(pink_coral_image, (200, 550))
-    screen.blit(red_coral_image, (800, 520))
+    width = screen.get_width()
+    height = screen.get_height()
+
+    sand_top = get_sand_top(screen)
+
+    # Coral positions based on screen size
+    orange_x = int(width * 0.05)
+    pink_x = int(width * 0.40)
+    red_x = int(width * 0.75)
+
+    coral_y = int(sand_top - 20)
+
+   # Position coral along the bottom of the screen
+    orange_rect = orange_coral_image.get_rect(midbottom=(orange_x, height))
+    pink_rect = pink_coral_image.get_rect(midbottom=(pink_x, height))
+    red_rect = red_coral_image.get_rect(midbottom=(red_x, height))
+
+    # Draw the coral images
+    screen.blit(orange_coral_image, orange_rect)
+    screen.blit(pink_coral_image, pink_rect)
+    screen.blit(red_coral_image, red_rect)
 
 def draw_scoreboard(screen, score):
     # Make a rectangle for the board and pin its top-right corner near the screen's top-right
