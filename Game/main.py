@@ -1,6 +1,7 @@
 import pygame
 import display
 import fish
+import shark
 import scoreboard
 
 pygame.init()
@@ -24,6 +25,8 @@ fish_list = [
     fish.Fish(screen, "AngelFish.png",      "large"),
     fish.Fish(screen, "PurpleFish.png",     "large"),]
 
+game_shark = shark.shark(screen)
+
 clock = pygame.time.Clock() # Controls how fast the loop runs
 
 # Game loop
@@ -37,6 +40,8 @@ while running:
     for fish in fish_list:
         fish.update()
 
+    game_shark.update()
+
     # DRAW
     display.draw_background(screen)
     display.draw_fisherman(screen)
@@ -46,6 +51,7 @@ while running:
     for fish in fish_list:
         fish.draw(screen)
     
+    game_shark.draw(screen)
 
     # Update the display
     pygame.display.flip()
