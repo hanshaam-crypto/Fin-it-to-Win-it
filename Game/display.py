@@ -3,13 +3,15 @@
 import pygame
 import random # for randomizing the treasurechest positions
 
-# Decorative Images
+# Image initialization
 orange_coral_image = None
 pink_coral_image = None
 red_coral_image = None
 fisherman_image = None
 treasure_chest_image = None
 treasure_chest_x = None
+boat_image_right = None
+boat_image_left = None
 
 # Set background colors RGB
 SKY_BLUE = (190, 230, 255)
@@ -55,6 +57,7 @@ def setup_images():
     global orange_coral_image, pink_coral_image
     global red_coral_image, fisherman_image
     global treasure_chest_image
+    global boat_image_right, boat_image_left
 
     orange_coral_image = pygame.image.load("Game/images/OrangeCoral.png").convert_alpha()
     pink_coral_image = pygame.image.load("Game/images/PinkCoral.png").convert_alpha()
@@ -62,6 +65,7 @@ def setup_images():
     treasure_chest_image = pygame.image.load("Game/images/TreasureChest.png").convert_alpha()
 
     fisherman_image = pygame.image.load("Game/images/Fisherman.png").convert_alpha()
+
     # Fade the bottom edge into the water
     fade_height = 40
 
@@ -71,23 +75,33 @@ def setup_images():
             new_alpha = int(a * (fisherman_image.get_height() - y) / fade_height)
             fisherman_image.set_at((x, y), (r, g, b, new_alpha))
 
-def draw_fisherman(screen):
+    # Create the boat facing both directions
+    boat_image_right = fisherman_image
+    boat_image_left = pygame.transform.flip(fisherman_image, True, False)
 
-    # Resize based on screen height (15% of screen height)
+def draw_fisherman(screen, boat_x, boat_direction):
+
+    # Resize based on screen height
     height = int(screen.get_height() * 0.15)
 
-    w, h = fisherman_image.get_size()
+    # Choose image based on boat direction
+    if boat_direction == 1:
+        image = boat_image_left
+    else:
+        image = boat_image_right
+
+    image_width, image_height = image.get_size()
 
     resized_image = pygame.transform.smoothscale(
-        fisherman_image, (int(w * height / h), height)
+        image, (int(image_width * height / image_height), height)
     )
 
-    # Position based on screen width and horizon
-    fisherman_rect = resized_image.get_rect(
-        midbottom=(screen.get_width() // 2, get_horizon(screen) + 18)
+    # Position based on boat's horizontal position and waterline
+    boat_rectangle = resized_image.get_rect(
+        midbottom=(boat_x, get_horizon(screen) + 18)
     )
 
-    screen.blit(resized_image, fisherman_rect)
+    screen.blit(resized_image, boat_rectangle)
 
 def draw_treasure_chest(screen):
     global treasure_chest_x
@@ -115,8 +129,6 @@ def draw_treasure_chest(screen):
     )
 
     screen.blit(resized_image, chest_rectangle)
-
-# def draw_entity(screen):
 
 # def draw_obstacles(screen):
 

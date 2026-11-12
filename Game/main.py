@@ -3,6 +3,7 @@ import display
 import fish
 import shark
 import scoreboard
+import boat_movement
 
 pygame.init()
 
@@ -16,6 +17,7 @@ pygame.display.set_caption("Fin It to Win It!")
 # Initialize display settings
 scoreboard.setup_scoreboard()
 display.setup_images()
+game_boat = boat_movement.Boat(screen)
 
 fish_list = [
     fish.Fish(screen, "GreyFish.png",       "small"),
@@ -37,6 +39,12 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+    # Check which keys are being pressed
+    keys = pygame.key.get_pressed()
+
+    # Update boat movement
+    game_boat.update(keys)
+
     for fish in fish_list:
         fish.update()
 
@@ -44,7 +52,7 @@ while running:
 
     # DRAW
     display.draw_background(screen)
-    display.draw_fisherman(screen)
+    display.draw_fisherman(screen, game_boat.x, game_boat.direction)
     display.draw_decorations(screen)
     display.draw_treasure_chest(screen)
     scoreboard.draw_scoreboard(screen, 0)
