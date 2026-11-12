@@ -26,7 +26,13 @@ class Fish:
         # Start somewhere random, but inside this fish's depth band
         self.rect = self.image_right.get_rect()
         band_top, band_bottom = display.get_band(screen, tier)
+
+        # Start small fish below the hook
+        if tier == "small":
+            band_top = display.get_horizon(screen) + 40
+
         self.rect.top = random.randint(band_top, band_bottom - self.rect.height)
+
         self.rect.x = random.randint(0, self.screen_width - self.rect.width)
 
     def update(self):
