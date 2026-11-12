@@ -21,6 +21,7 @@ while running:
 
     display.draw_background(screen)
     display.draw_boat_and_fisherman(screen)
+    display.draw_fish(screen)
     display.draw_scoreboard(screen, 0)
 
     # Update the display
