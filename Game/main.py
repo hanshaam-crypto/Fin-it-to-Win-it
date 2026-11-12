@@ -1,6 +1,7 @@
 import pygame
 import display
 import fish
+import scoreboard
 
 pygame.init()
 
@@ -12,11 +13,10 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Fin It to Win It!")
 
 # Initialize display settings
-display.setup_fonts()
+scoreboard.setup_scoreboard()
 display.setup_images()
 
-
-fishes = [
+fish_list = [
     fish.Fish(screen, "GreyFish.png",       "small"),
     fish.Fish(screen, "GreyYellowFish.png", "small"),
     fish.Fish(screen, "YellowFish.png",     "medium"),
@@ -24,7 +24,7 @@ fishes = [
     fish.Fish(screen, "AngelFish.png",      "large"),
     fish.Fish(screen, "PurpleFish.png",     "large"),]
 
-clock = pygame.time.Clock() #Controls how fast the loop runs
+clock = pygame.time.Clock() # Controls how fast the loop runs
 
 # Game loop
 running = True
@@ -34,16 +34,16 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    for f in fishes:
-        f.update()
+    for fish in fish_list:
+        fish.update()
 
-    # # DRAW
+    # DRAW
     display.draw_background(screen)
     display.draw_fisherman(screen)
     display.draw_decorations(screen)
-    display.draw_scoreboard(screen, 0)
-    for f in fishes:
-        f.draw(screen)
+    scoreboard.draw_scoreboard(screen, 0)
+    for fish in fish_list:
+        fish.draw(screen)
     
 
     # Update the display

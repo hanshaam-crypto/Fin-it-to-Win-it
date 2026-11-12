@@ -8,17 +8,6 @@ pink_coral_image = None
 red_coral_image = None
 fisherman_image = None
 
-# Fade the bottom edge of the image into the water
-# for y in range(fisherman_image.get_height() - 12, fisherman_image.get_height()):
-#     for x in range(fisherman_image.get_width()):
-#         r, g, b, a = fisherman_image.get_at((x, y))
-#         new_alpha = int(a * (fisherman_image.get_height() - y) / 12)
-#         fisherman_image.set_at((x, y), (r, g, b, new_alpha))
-
-# greyfish_image = pygame.transform.smoothscale(greyfish_image, (76, 49))
-
-
-
 # Set background colors RGB
 SKY_BLUE = (190, 230, 255)
 OCEAN_BLUE = (120, 195, 235)
@@ -27,13 +16,6 @@ SAND_YELLOW = (194, 178, 128)
 # Fractions of the screen height (0.0 = top, 1.0 = bottom)
 HORIZON = 0.42    # water starts 42% of the way down
 SAND = 0.05       # sand is the bottom 5% of the screen
-
-# Score Font global variable
-score_font = None
-
-def setup_fonts():
-    global score_font
-    score_font = pygame.font.SysFont("trebuchetms", 36, bold=True) # font type and size
 
 def get_horizon(screen):
     return int(screen.get_height() * HORIZON)
@@ -74,7 +56,16 @@ def setup_images():
     orange_coral_image = pygame.image.load("Game/images/OrangeCoral.png").convert_alpha()
     pink_coral_image = pygame.image.load("Game/images/PinkCoral.png").convert_alpha()
     red_coral_image = pygame.image.load("Game/images/RedCoral.png").convert_alpha()
+
     fisherman_image = pygame.image.load("Game/images/Fisherman.png").convert_alpha()
+    # Fade the bottom edge into the water
+    fade_height = 40
+
+    for y in range(fisherman_image.get_height() - fade_height, fisherman_image.get_height()):
+        for x in range(fisherman_image.get_width()):
+            r, g, b, a = fisherman_image.get_at((x, y))
+            new_alpha = int(a * (fisherman_image.get_height() - y) / fade_height)
+            fisherman_image.set_at((x, y), (r, g, b, new_alpha))
 
 def draw_fisherman(screen):
 
@@ -89,7 +80,7 @@ def draw_fisherman(screen):
 
     # Position based on screen width and horizon
     fisherman_rect = resized_image.get_rect(
-        midbottom=(screen.get_width() // 2, get_horizon(screen) + 15)
+        midbottom=(screen.get_width() // 2, get_horizon(screen) + 18)
     )
 
     screen.blit(resized_image, fisherman_rect)
@@ -122,17 +113,3 @@ def draw_decorations(screen):
     screen.blit(orange_coral_image, orange_rect)
     screen.blit(pink_coral_image, pink_rect)
     screen.blit(red_coral_image, red_rect)
-
-def draw_scoreboard(screen, score):
-    # Make a rectangle for the board and pin its top-right corner near the screen's top-right
-    board = pygame.Rect(0, 0, 190, 65)
-    board.topright = (screen.get_width() - 20, 20)
-
-    # Draw the oval and its outline inside that rectangle
-    pygame.draw.ellipse(screen, (220, 245, 255), board)
-    pygame.draw.ellipse(screen, (60, 130, 170), board, 3)
-
-    # Draw the score text in the center of the board
-    score_text = score_font.render("Score: " + str(score), True, (35, 75, 100))
-    score_rect = score_text.get_rect(center=board.center)
-    screen.blit(score_text, score_rect)
