@@ -6,6 +6,11 @@ import pygame
 fisherman_image = pygame.image.load("Game/images/Fisherman.png")
 greyfish_image = pygame.image.load("Game/images/GreyFish.png")
 
+# Decorative Images
+orange_coral_image = pygame.image.load("Game/images/OrangeCoral.png")
+pink_coral_image = pygame.image.load("Game/images/PinkCoral.png")
+red_coral_image = pygame.image.load("Game/images/RedCoral.png")
+
 # Resize Images
 fisherman_image = pygame.transform.smoothscale(fisherman_image, (169, 135))
 # Fade the bottom edge of the image into the water
@@ -21,7 +26,6 @@ greyfish_image = pygame.transform.smoothscale(greyfish_image, (76, 49))
 greyfish_x = 0
 greyfish_y = 315
 greyfish_speed = 0.15
-
 
 # Set background colors RGB
 SKY_BLUE = (190, 230, 255)
@@ -66,6 +70,12 @@ def draw_fish(screen):
 
     # Draw the fish
     screen.blit(greyfish_image, (greyfish_x, greyfish_y))
+
+def draw_decorations(screen):
+    # Draw decorative coral images
+    screen.blit(orange_coral_image, (50, 500))
+    screen.blit(pink_coral_image, (200, 550))
+    screen.blit(red_coral_image, (800, 520))
 
 def draw_scoreboard(screen, score):
     # Draw oval scoreboard
