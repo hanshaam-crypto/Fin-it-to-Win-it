@@ -5,52 +5,64 @@ import display
 
 class shark:
     def __init__(self, screen):
-
-        # Set shark size and speed
-        shark_height = int(screen.get_height() * 0.11)
         self.swimming_speed = 2
-        self.point_value = -25
+        self.points = -25                      # negative: catching the shark costs points
 
-        # Load and resize shark image
-        self.image_right = display.load_image("Shark.png", shark_height)
+        # The sprite faces right, so make a mirrored copy for swimming left
+        self.image_right = display.load_image("Shark.png")
         self.image_left = pygame.transform.flip(self.image_right, True, False)
 
-        # Randomize swimming direction
         self.swimming_direction = random.choice([1, -1])
-
-        # Randomize swimming depth
-        fish_size = random.choice(["medium", "large"])
-        swimming_area_top, swimming_area_bottom = display.get_band(screen, fish_size)
-
-        # Set starting position
-        self.shark_rectangle = self.image_right.get_rect()
-        self.shark_rectangle.top = random.randint(
-            swimming_area_top,
-            swimming_area_bottom - self.shark_rectangle.height
-        )
-
-        half_width = self.shark_rectangle.width // 2
-        self.shark_rectangle.centerx = random.randint(
-            half_width, screen.get_width() - half_width
-        )
-
         self.game_screen_width = screen.get_width()
 
+        self.respawning = False
+        self.respawn_start = 0
+
+        self.rect = self.image_right.get_rect()
+        self.pick_depth(screen)
+
+        half_width = self.rect.width // 2
+        self.rect.centerx = random.randint(half_width, screen.get_width() - half_width)
+
+    def pick_depth(self, screen):
+        # Swim in the middle or lower part of the ocean
+        band_top, band_bottom = display.get_band(screen, random.choice(["medium", "large"]))
+        self.rect.top = random.randint(band_top, band_bottom - self.rect.height)
+
     def update(self):
-        # Move shark
-        self.shark_rectangle.x += self.swimming_speed * self.swimming_direction
+        # Wait 2 seconds after respawning before swimming
+        if self.respawning:
+            if pygame.time.get_ticks() - self.respawn_start < 2000:
+                return
+            else:
+                self.respawning = False
 
-        # If shark moves completely off the right side, bring it back on the left
-        if self.shark_rectangle.left > self.game_screen_width:
-            self.shark_rectangle.right = 0
+        self.rect.x += self.swimming_speed * self.swimming_direction
 
-        # If shark moves completely off the left side, bring it back on the right
-        elif self.shark_rectangle.right < 0:
-            self.shark_rectangle.left = self.game_screen_width
+        # Wrap around the screen
+        if self.rect.left > self.game_screen_width:
+            self.rect.right = 0
+        elif self.rect.right < 0:
+            self.rect.left = self.game_screen_width
+
+    def respawn(self, screen):
+        self.swimming_direction = random.choice([1, -1])
+        self.pick_depth(screen)
+
+        # Start just outside the screen
+        if self.swimming_direction == 1:
+            self.rect.right = 0
+        else:
+            self.rect.left = self.game_screen_width
+
+        self.respawning = True
+        self.respawn_start = pygame.time.get_ticks()
 
     def draw(self, screen):
-        # Display shark facing its swimming direction
+        if self.respawning:
+            return
+
         if self.swimming_direction == 1:
-            screen.blit(self.image_left, self.shark_rectangle)
+            screen.blit(self.image_right, self.rect)
         else:
-            screen.blit(self.image_right, self.shark_rectangle)
+            screen.blit(self.image_left, self.rect)

@@ -1,11 +1,12 @@
 import pygame
 import display
+import scoreboard
 
 class Hook:
     def __init__(self, screen, boat):
 
         # Load hook image
-        self.hook_image = display.load_image("Hook.png", 35)
+        self.hook_image = display.load_image("Hook.png")
 
         # Set hook movement speed
         self.movement_speed = 5
@@ -22,20 +23,16 @@ class Hook:
         # Starting position of hook
         self.hook_rectangle = self.hook_image.get_rect()
 
-        self.horizontal_offset = 53
+        self.horizontal_offset = 60
         self.starting_y = display.get_horizon(screen) + 2
 
         self.hook_rectangle.centerx = boat.x + self.horizontal_offset
         self.hook_rectangle.top = self.starting_y
 
-        # Flag to indicate if the hook is lowered
-        self.lowered = False
 
         # Remember the screen boundaries
-        self.screen_height = screen.get_height()
         self.hook_top_limit = self.starting_y
-        self.hook_bottom_limit = display.get_sand_top(screen) - self.hook_rectangle.height
-
+        self.hook_bottom_limit = display.get_sand_top(screen)
     
     def update(self, keys):
 
@@ -48,7 +45,8 @@ class Hook:
 
         # Automatically return when carrying a fish
         if self.returning:
-            self.hook_rectangle.y -= self.return_speed
+            speed = getattr(self.caught_fish, "pull_speed", self.return_speed)
+            self.hook_rectangle.y -= speed
 
             # Keep fish attached to the hook
             self.caught_fish.rect.centerx = self.hook_rectangle.centerx
@@ -59,7 +57,6 @@ class Hook:
                 self.hook_rectangle.top = self.hook_top_limit
 
                 # Add points to the score
-                import scoreboard
                 scoreboard.add_points(self.caught_fish.points)
 
                 self.caught_fish.respawn(self.screen)
@@ -93,13 +90,13 @@ class Hook:
 
         # Starting point of fishing line
         line_start = (
-            self.hook_rectangle.centerx - 4,
+            self.hook_rectangle.centerx + 5,
             display.get_horizon(screen) + 2
         )
 
         # Ending point of fishing line
         line_end = (
-            self.hook_rectangle.centerx - 4,
+            self.hook_rectangle.centerx + 5,
             self.hook_rectangle.top
         )
 

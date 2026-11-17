@@ -16,9 +16,7 @@ class Boat:
         self.direction = 1
 
         # Get the boat's width after resizing
-        image_width, image_height = display.fisherman_image.get_size()
-        boat_height = int(screen.get_height() * 0.15)
-        self.boat_width = int(image_width * boat_height / image_height)
+        self.boat_width = display.fisherman_image.get_width()
 
         self.screen_width = screen.get_width()
 
