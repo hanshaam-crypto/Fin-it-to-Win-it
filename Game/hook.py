@@ -52,6 +52,11 @@ class Hook:
             # Check if hook reached the boat
             if self.hook_rectangle.top <= self.hook_top_limit:
                 self.hook_rectangle.top = self.hook_top_limit
+
+                # Add points to the score
+                import scoreboard
+                scoreboard.add_points(self.caught_fish.points)
+
                 self.caught_fish.caught = True # Marks the fish as caught for scoring
                 self.caught_fish = None
                 self.returning = False
