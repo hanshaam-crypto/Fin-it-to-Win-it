@@ -49,16 +49,17 @@ while running:
     game_hook.update(keys)
 
     for current_fish in fish_list:
-        if game_hook.caught_fish is None:
+        if not current_fish.caught:
 
-            current_fish.update()
-
-            if game_hook.hook_rectangle.colliderect(current_fish.rect):
-                game_hook.catch_fish(current_fish)
-
-        else:
-            if current_fish != game_hook.caught_fish:
+            if game_hook.caught_fish is None:
                 current_fish.update()
+
+                if game_hook.hook_rectangle.colliderect(current_fish.rect):
+                    game_hook.catch_fish(current_fish)
+
+            else:
+                if current_fish != game_hook.caught_fish:
+                    current_fish.update()
 
     game_shark.update()
 
@@ -70,8 +71,9 @@ while running:
 
     # Ensures that the caught fish isn't drawn twice
     for current_fish in fish_list:
-        if current_fish != game_hook.caught_fish:
-            current_fish.draw(screen)
+        if not current_fish.caught:
+            if current_fish != game_hook.caught_fish:
+                current_fish.draw(screen)
 
     game_shark.draw(screen)
     game_hook.draw(screen)

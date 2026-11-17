@@ -20,6 +20,7 @@ class Fish:
 
         self.speed = speed
         self.points = points
+        self.caught = False
         self.direction = random.choice([1, -1])    # 1 = swimming right, -1 = swimming left
         self.screen_width = screen.get_width()
 

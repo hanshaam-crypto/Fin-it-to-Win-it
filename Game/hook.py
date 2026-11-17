@@ -52,6 +52,7 @@ class Hook:
             # Check if hook reached the boat
             if self.hook_rectangle.top <= self.hook_top_limit:
                 self.hook_rectangle.top = self.hook_top_limit
+                self.caught_fish.caught = True # Marks the fish as caught for scoring
                 self.caught_fish = None
                 self.returning = False
 
