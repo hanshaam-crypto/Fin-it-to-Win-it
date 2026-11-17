@@ -9,14 +9,18 @@ class Hook:
 
         # Set hook movement speed
         self.movement_speed = 5
+        self.return_speed = 5
 
         # Store boat reference
         self.boat = boat
 
+        # Store caught fish
+        self.caught_fish = None
+        self.returning = False
+
         # Starting position of hook
         self.hook_rectangle = self.hook_image.get_rect()
 
-        # Adjust these values to position the hook
         self.horizontal_offset = 53
         self.starting_y = display.get_horizon(screen) + 2
 
@@ -30,19 +34,37 @@ class Hook:
 
     def update(self, keys):
 
-        # Follow the boat horizontally
-        if self.boat.direction == 1:
-            self.hook_rectangle.centerx = self.boat.x + self.horizontal_offset
-        else:
-            self.hook_rectangle.centerx = self.boat.x - self.horizontal_offset
+        # Follow the boat horizontally only when not carrying a fish
+        if self.caught_fish is None:
+            if self.boat.direction == 1:
+                self.hook_rectangle.centerx = self.boat.x + self.horizontal_offset
+            else:
+                self.hook_rectangle.centerx = self.boat.x - self.horizontal_offset
 
-        # Move hook down
-        if keys[pygame.K_DOWN]:
-            self.hook_rectangle.y += self.movement_speed
+        # Automatically return when carrying a fish
+        if self.returning:
+            self.hook_rectangle.y -= self.return_speed
 
-        # Move hook up
-        if keys[pygame.K_UP]:
-            self.hook_rectangle.y -= self.movement_speed
+            # Keep fish attached to the hook
+            self.caught_fish.rect.centerx = self.hook_rectangle.centerx
+            self.caught_fish.rect.bottom = self.hook_rectangle.bottom
+
+            # Check if hook reached the boat
+            if self.hook_rectangle.top <= self.hook_top_limit:
+                self.hook_rectangle.top = self.hook_top_limit
+                self.caught_fish = None
+                self.returning = False
+
+        # Allow player to control hook when not returning
+        elif self.caught_fish is None:
+
+            # Move hook down
+            if keys[pygame.K_DOWN]:
+                self.hook_rectangle.y += self.movement_speed
+
+            # Move hook up
+            if keys[pygame.K_UP]:
+                self.hook_rectangle.y -= self.movement_speed
 
         # Keep hook within vertical boundaries
         if self.hook_rectangle.top < self.hook_top_limit:
@@ -50,6 +72,10 @@ class Hook:
 
         if self.hook_rectangle.bottom > self.hook_bottom_limit:
             self.hook_rectangle.bottom = self.hook_bottom_limit
+
+    def catch_fish(self, caught_fish):
+        self.caught_fish = caught_fish
+        self.returning = True
 
     def draw(self, screen):
 
@@ -67,6 +93,10 @@ class Hook:
 
         # Draw fishing line
         pygame.draw.line(screen, (115, 115, 115), line_start, line_end, 2)
+
+        # Draw caught fish
+        if self.caught_fish is not None:
+            self.caught_fish.draw(screen)
 
         # Draw hook
         screen.blit(self.hook_image, self.hook_rectangle)

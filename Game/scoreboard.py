@@ -1,13 +1,19 @@
 import pygame
 
-# Scoreboard font
+# Scoreboard variables
+score = 0
 score_font = None
 
 def setup_scoreboard():
     global score_font
     score_font = pygame.font.SysFont("trebuchetms", 36, bold=True)
 
-def draw_scoreboard(screen, score):
+# Add points to the score
+def add_points(points):
+    global score
+    score += points
+
+def draw_scoreboard(screen):
     # Make a rectangle for the board
     board = pygame.Rect(0, 0, 190, 65)
     board.topright = (screen.get_width() - 20, 20)

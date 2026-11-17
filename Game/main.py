@@ -48,21 +48,33 @@ while running:
     game_boat.update(keys)
     game_hook.update(keys)
 
-    for fish in fish_list:
-        fish.update()
+    for current_fish in fish_list:
+        if game_hook.caught_fish is None:
+
+            current_fish.update()
+
+            if game_hook.hook_rectangle.colliderect(current_fish.rect):
+                game_hook.catch_fish(current_fish)
+
+        else:
+            if current_fish != game_hook.caught_fish:
+                current_fish.update()
 
     game_shark.update()
 
     # DRAW
     display.draw_background(screen)
     display.draw_fisherman(screen, game_boat.x, game_boat.direction)
-    game_hook.draw(screen)
     display.draw_treasure_chest(screen)
-    scoreboard.draw_scoreboard(screen, 0)
-    for fish in fish_list:
-        fish.draw(screen)
-    
+    scoreboard.draw_scoreboard(screen)
+
+    # Ensures that the caught fish isn't drawn twice
+    for current_fish in fish_list:
+        if current_fish != game_hook.caught_fish:
+            current_fish.draw(screen)
+
     game_shark.draw(screen)
+    game_hook.draw(screen)
 
     # Update the display
     pygame.display.flip()
