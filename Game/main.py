@@ -38,8 +38,14 @@ running = True
 
 while running:
     for event in pygame.event.get():
+        # Handles quitting the game
         if event.type == pygame.QUIT:
             running = False
+        # Handles spacebar press to lock the boat
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                if not game_boat.locked:
+                    game_boat.locked = True
 
     # Check which keys are being pressed
     keys = pygame.key.get_pressed()

@@ -3,6 +3,8 @@ import display
 
 class Boat:
     def __init__(self, screen):
+        # Boat is initially unlocked
+        self.locked = False
 
         # Set boat movement speed
         self.movement_speed = 5
@@ -21,22 +23,18 @@ class Boat:
         self.screen_width = screen.get_width()
 
     def update(self, keys):
+        if not self.locked:
+            if keys[pygame.K_LEFT]:
+                self.x -= self.movement_speed
+                self.direction = -1
 
-        # Move left
-        if keys[pygame.K_LEFT]:
-            self.x -= self.movement_speed
-            self.direction = -1
+            if keys[pygame.K_RIGHT]:
+                self.x += self.movement_speed
+                self.direction = 1
 
-        # Move right
-        elif keys[pygame.K_RIGHT]:
-            self.x += self.movement_speed
-            self.direction = 1
+            # Keep boat inside the screen
+            if self.x < 0:
+                self.x = 0
 
-        # Keep the boat inside the screen
-        half_width = self.boat_width // 2
-
-        if self.x < half_width:
-            self.x = half_width
-
-        elif self.x > self.screen_width - half_width:
-            self.x = self.screen_width - half_width
+            if self.x > self.screen_width - self.boat_width:
+                self.x = self.screen_width - self.boat_width

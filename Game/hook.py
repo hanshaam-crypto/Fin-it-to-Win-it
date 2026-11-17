@@ -27,11 +27,15 @@ class Hook:
         self.hook_rectangle.centerx = boat.x + self.horizontal_offset
         self.hook_rectangle.top = self.starting_y
 
+        # Flag to indicate if the hook is lowered
+        self.lowered = False
+
         # Remember the screen boundaries
         self.screen_height = screen.get_height()
         self.hook_top_limit = self.starting_y
         self.hook_bottom_limit = display.get_sand_top(screen) - self.hook_rectangle.height
 
+    
     def update(self, keys):
 
         # Follow the boat horizontally only when not carrying a fish
@@ -57,20 +61,20 @@ class Hook:
                 import scoreboard
                 scoreboard.add_points(self.caught_fish.points)
 
-                self.caught_fish.caught = True # Marks the fish as caught for scoring
+                self.caught_fish.caught = True
                 self.caught_fish = None
                 self.returning = False
 
-        # Allow player to control hook when not returning
-        elif self.caught_fish is None:
+                # Unlock boat only after delivering a fish
+                self.boat.locked = False
 
-            # Move hook down
-            if keys[pygame.K_DOWN]:
-                self.hook_rectangle.y += self.movement_speed
-
-            # Move hook up
+        # Allow player to control hook only after locking the boat
+        elif self.caught_fish is None and self.boat.locked:
             if keys[pygame.K_UP]:
                 self.hook_rectangle.y -= self.movement_speed
+
+            if keys[pygame.K_DOWN]:
+                self.hook_rectangle.y += self.movement_speed
 
         # Keep hook within vertical boundaries
         if self.hook_rectangle.top < self.hook_top_limit:
@@ -78,6 +82,7 @@ class Hook:
 
         if self.hook_rectangle.bottom > self.hook_bottom_limit:
             self.hook_rectangle.bottom = self.hook_bottom_limit
+
 
     def catch_fish(self, caught_fish):
         self.caught_fish = caught_fish
