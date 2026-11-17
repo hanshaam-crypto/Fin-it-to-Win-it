@@ -13,6 +13,7 @@ class Hook:
 
         # Store boat reference
         self.boat = boat
+        self.screen = screen
 
         # Store caught fish
         self.caught_fish = None
@@ -61,11 +62,11 @@ class Hook:
                 import scoreboard
                 scoreboard.add_points(self.caught_fish.points)
 
-                self.caught_fish.caught = True
+                self.caught_fish.respawn(self.screen)
                 self.caught_fish = None
                 self.returning = False
 
-                # Unlock boat only after delivering a fish
+                # Unlock boat after delivering a fish
                 self.boat.locked = False
 
         # Allow player to control hook only after locking the boat
