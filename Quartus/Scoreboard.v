@@ -1,6 +1,6 @@
-// Draws the score board: an oval with an outline and the text "Score: N".
-// Same size and position as the Python version: 190 x 65, 20 pixels from the
-// top and right edges of the screen.
+// Draws the score board as a wooden hanging sign (chunky pixel art, every art
+// pixel is 3x3 screen pixels, like the fisherman and the fish).
+// Size 150 x 51, starts right after the title and ends 20 pixels from the right edge.
 module Scoreboard(
 	input [10:0] pixel_x,
 	input [9:0]  pixel_y,
@@ -11,14 +11,14 @@ module Scoreboard(
 	output reg [7:0] green,
 	output reg [7:0] blue
 );
-	localparam BOARD_X = 430;     // 640 - 20 - 190
-	localparam BOARD_Y = 20;
-	localparam BOARD_W = 190;
-	localparam BOARD_H = 65;
-	localparam IN_W    = 184;     // inside of the outline (3 pixels thick)
-	localparam IN_H    = 59;
-	localparam TEXT_TOP = 45;     // text is 14 pixels tall, centered in the oval
-	localparam PITCH    = 12;     // each character takes 12 pixels across
+	localparam BOARD_X = 470;
+	localparam BOARD_Y = 22;
+	localparam BOARD_W = 150;     // 50 art pixels
+	localparam BOARD_H = 51;      // 17 art pixels
+	localparam CH1     = BOARD_X + 18;    // left chain
+	localparam CH2     = BOARD_X + 126;   // right chain
+	localparam TEXT_TOP = BOARD_Y + 18;   // text is 14 pixels tall, centered on the sign
+	localparam PITCH    = 12;             // each character takes 12 pixels across
 
 	// Tiny 5x7 letters. Character codes:
 	// 0-9 = digits, 10=S 11=c 12=o 13=r 14=e 15=: 16=- 17=space
@@ -48,9 +48,8 @@ module Scoreboard(
 		end
 	endfunction
 
-	integer px, py, dx2, dy2;
+	integer px, py, lx, ly, ax, ay, r, pl, pr, cx, cy;
 	integer nd, total, tleft, rx, k, w, gx, gy, j, m;
-	reg     in_outer, in_inner;
 	reg [4:0]  code;
 	reg [34:0] rows;
 	reg [4:0]  bits;
@@ -58,66 +57,94 @@ module Scoreboard(
 	always @(*) begin
 		opaque = 0; red = 0; green = 0; blue = 0;
 		px = pixel_x; py = pixel_y;
-		dx2 = 0; dy2 = 0; in_outer = 0; in_inner = 0;
+		lx = 0; ly = 0; ax = 0; ay = 0; r = 0; pl = 0; pr = 0; cx = 0; cy = 0;
 		nd = 1; total = 0; tleft = 0; rx = 0; k = 0; w = 0; gx = 0; gy = 0; j = 0; m = 0;
 		code = 5'd17; rows = 0; bits = 0;
 
+		// ---------- the two chains (block links: 2 wide, 2 tall, 1 gap) ----------
+		if (py < BOARD_Y + 3 &&
+		    ((px >= CH1 && px < CH1 + 6) || (px >= CH2 && px < CH2 + 6))) begin
+			cx = (px >= CH2) ? (px - CH2) : (px - CH1);   // 0..5
+			cy = (py / 3) % 3;                             // 0,1 = link, 2 = gap
+			if (cy != 2) begin
+				opaque = 1;
+				if (cx < 3) begin red = 165; green = 170; blue = 182; end   // light side
+				else        begin red = 110; green = 115; blue = 126; end   // dark side
+			end
+		end
+
+		// ---------- the sign ----------
 		if (px >= BOARD_X && px < BOARD_X + BOARD_W &&
 		    py >= BOARD_Y && py < BOARD_Y + BOARD_H) begin
 
-			// Is this pixel inside the oval? (ellipse equation, doubled to avoid fractions)
-			dx2 = 2*px + 1 - (2*BOARD_X + BOARD_W);
-			dy2 = 2*py + 1 - (2*BOARD_Y + BOARD_H);
-			in_outer = (dx2*dx2*(BOARD_H*BOARD_H) + dy2*dy2*(BOARD_W*BOARD_W))
-			           <= (BOARD_W*BOARD_W*BOARD_H*BOARD_H);
-			in_inner = (dx2*dx2*(IN_H*IN_H) + dy2*dy2*(IN_W*IN_W))
-			           <= (IN_W*IN_W*IN_H*IN_H);
+			opaque = 1;
+			lx = px - BOARD_X;
+			ly = py - BOARD_Y;
+			ax = lx / 3;          // art pixel column 0..49
+			ay = ly / 3;          // art pixel row 0..16
 
-			if (in_outer) begin
-				opaque = 1;
-				if (in_inner) begin
-					red = 8'hDC; green = 8'hF5; blue = 8'hFF;   // fill
-				end else begin
-					red = 8'h3C; green = 8'h82; blue = 8'hAA;   // outline
+			if (ax == 0 || ax == 49 || ay == 0 || ay == 16) begin
+				red = 105; green = 110; blue = 122;            // metal frame
+			end
+			else begin
+				// three wooden planks, 5 art rows each (4 wood + 1 dark gap)
+				r  = ay - 1;
+				pl = r / 5;
+				pr = r % 5;
+				if (pr == 4) begin
+					red = 85; green = 45; blue = 25;           // dark gap
+				end
+				else if (pr == 0) begin
+					red = 185; green = 120; blue = 68;         // light top row
+				end
+				else if (pr == 2 && ((ax * 7 + pl * 5) % 11) == 0) begin
+					red = 138; green = 84; blue = 44;          // a block of wood grain
+				end
+				else begin
+					red = 160; green = 100; blue = 55;         // wood
+				end
+
+				// nails
+				if ((ax == 2 || ax == 47) && (ay == 2 || ay == 14)) begin
+					red = 60; green = 60; blue = 70;
 				end
 			end
 
-			// ---- the text "Score: N" ----
+			// ---- the text "Score: N" painted on the sign ----
 			if (d3 != 0) nd = 4;
 			else if (d2 != 0) nd = 3;
 			else if (d1 != 0) nd = 2;
 			else nd = 1;
 
-			total = 7 + score_neg + nd;                       // number of characters
-			tleft = BOARD_X + BOARD_W/2 - total*(PITCH/2);    // centered
+			total = 7 + score_neg + nd;                          // number of characters
+			tleft = BOARD_X + BOARD_W/2 - total*(PITCH/2);       // centered
 
 			if (py >= TEXT_TOP && py < TEXT_TOP + 14 &&
 			    px >= tleft && px < tleft + total*PITCH) begin
 
 				rx = px - tleft;
-				k  = rx / PITCH;        // which character
-				w  = rx % PITCH;        // where inside the character
-				gx = w / 2;             // art column 0..4
-				gy = (py - TEXT_TOP) / 2;  // art row 0..6
+				k  = rx / PITCH;
+				w  = rx % PITCH;
+				gx = w / 2;
+				gy = (py - TEXT_TOP) / 2;
 
-				// which character is it?
 				if (k < 7) begin
 					case (k)
-						0: code = 5'd10;  // S
-						1: code = 5'd11;  // c
-						2: code = 5'd12;  // o
-						3: code = 5'd13;  // r
-						4: code = 5'd14;  // e
-						5: code = 5'd15;  // :
-						default: code = 5'd17; // space
+						0: code = 5'd10;   // S
+						1: code = 5'd11;   // c
+						2: code = 5'd12;   // o
+						3: code = 5'd13;   // r
+						4: code = 5'd14;   // e
+						5: code = 5'd15;   // :
+						default: code = 5'd17;   // space
 					endcase
 				end
 				else if (score_neg && k == 7) begin
-					code = 5'd16;         // minus sign
+					code = 5'd16;          // minus sign
 				end
 				else begin
-					j = k - 7 - score_neg;    // which digit from the left
-					m = nd - 1 - j;           // 3 = thousands ... 0 = ones
+					j = k - 7 - score_neg;
+					m = nd - 1 - j;
 					case (m)
 						3: code = {1'b0, d3};
 						2: code = {1'b0, d2};
@@ -130,8 +157,7 @@ module Scoreboard(
 				bits = rows[(6 - gy) * 5 +: 5];
 
 				if (w < 10 && bits[4 - gx]) begin
-					opaque = 1;
-					red = 8'h23; green = 8'h4B; blue = 8'h64;   // text color
+					red = 255; green = 232; blue = 170;     // cream-gold lettering
 				end
 			end
 		end

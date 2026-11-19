@@ -4,26 +4,31 @@
 //   S_REEL  : hook rises by itself carrying the item. Shark and chest rise slower.
 //   S_SCORE : hook is back at the top. Add the points, make the item respawn.
 //
-// Item numbers ("caught"):  0 = nothing, 1..6 = fish 0..5, 7 = shark, 8 = chest
+// Item numbers ("caught"): 0 = nothing, 1..6 = fish 0..5, 7 = shark, 8 = chest,
+//                          9,10 = bottles, 11,12 = pop tabs (trash, hard level only)
 module Game_Control(
 	input clk,
 	input rst_n,
 	input button,                // 1 while the hook button is held
+	input hard,                  // 1 = hard level (trash can be hooked)
 	input [10:0] hook_x,
 	input [10:0] fish_x0, fish_x1, fish_x2, fish_x3, fish_x4, fish_x5,
 	input [10:0] shark_x,        // shark x PLUS 112
 	input [9:0]  shark_y,
 	input [10:0] chest_x,
-	output reg [9:0] hook_y,     // bottom tip of the hook
-	output reg [3:0] caught,     // what the hook is carrying
-	output reg [7:0] respawn,    // one pulse per item when it is delivered
+	input [10:0] trash_x0, trash_x1, trash_x2, trash_x3,
+	input [9:0]  trash_y0, trash_y1, trash_y2, trash_y3,
+	output reg [9:0]  hook_y,    // bottom tip of the hook
+	output reg [3:0]  caught,    // what the hook is carrying
+	output reg [11:0] respawn,   // one pulse per item when it is delivered
+	output reg        drop,      // one pulse when the chest is dropped
 	output [3:0] d3, d2, d1, d0, // score digits
 	output score_neg
 );
 	localparam HOOK_MIN = 10'd206;   // resting spot, just under the boat
 	localparam HOOK_MAX = 10'd452;   // top of the sand
 	localparam DOWN = 10'd2;         // speed going down
-	localparam UP   = 10'd2;         // speed going up (empty hook, or carrying a fish)
+	localparam UP   = 10'd2;         // speed going up (empty hook, fish, trash)
 	localparam SLOW = 10'd1;         // speed going up with the shark or the chest
 
 	// y positions of the fish (these must match the top file)
@@ -47,6 +52,7 @@ module Game_Control(
 	wire [11:0] hy1 = {2'b00, hook_y} + 12'd1;
 
 	// ---------- does the hook overlap each item? ----------
+
 	// small fish are 32x16, medium 40x20, large 48x24
 	wire hit0 = (hx0 < fish_x0 + 12'd32) && (hx1 > fish_x0) && (hy0 < FY0 + 12'd16) && (hy1 > FY0);
 	wire hit1 = (hx0 < fish_x1 + 12'd32) && (hx1 > fish_x1) && (hy0 < FY1 + 12'd16) && (hy1 > FY1);
@@ -54,14 +60,31 @@ module Game_Control(
 	wire hit3 = (hx0 < fish_x3 + 12'd40) && (hx1 > fish_x3) && (hy0 < FY3 + 12'd20) && (hy1 > FY3);
 	wire hit4 = (hx0 < fish_x4 + 12'd48) && (hx1 > fish_x4) && (hy0 < FY4 + 12'd24) && (hy1 > FY4);
 	wire hit5 = (hx0 < fish_x5 + 12'd48) && (hx1 > fish_x5) && (hy0 < FY5 + 12'd24) && (hy1 > FY5);
+	
 	// the shark is 112x42; its x is stored +112, so it covers (shark_x-112) to shark_x
 	wire hitS = (hx0 < shark_x) && (hx1 + 12'd112 > shark_x) && (hy0 < shark_y + 12'd42) && (hy1 > shark_y);
+
 	// the chest is 48x36
 	wire hitC = (hx0 < chest_x + 12'd48) && (hx1 > chest_x) && (hy0 < CHEST_Y + 12'd36) && (hy1 > CHEST_Y);
 
-	wire hit_any = hit0 | hit1 | hit2 | hit3 | hit4 | hit5 | hitS | hitC;
-	wire [3:0] hit_id = hitC ? 4'd8 : hitS ? 4'd7 : hit5 ? 4'd6 : hit4 ? 4'd5 :
-	                    hit3 ? 4'd4 : hit2 ? 4'd3 : hit1 ? 4'd2 : 4'd1;
+	// the chest being carried (48x36, hanging from the hook) vs the shark
+	wire [11:0] cc_x = (hook_x > 11'd24) ? ({1'b0, hook_x} - 12'd24) : 12'd0;
+	wire [11:0] cc_y = {2'b00, hook_y} - 12'd18;
+	wire shark_hits_chest = (cc_x < shark_x) && (cc_x + 12'd160 > shark_x) &&
+	                        (cc_y < shark_y + 12'd42) && (cc_y + 12'd36 > shark_y);
+	
+	// trash (hard level only): bottles are 12x24, pop tabs are 16x16
+	wire hitT0 = hard && (hx0 < trash_x0 + 12'd12) && (hx1 > trash_x0) && (hy0 < trash_y0 + 12'd24) && (hy1 > trash_y0);
+	wire hitT1 = hard && (hx0 < trash_x1 + 12'd12) && (hx1 > trash_x1) && (hy0 < trash_y1 + 12'd24) && (hy1 > trash_y1);
+	wire hitT2 = hard && (hx0 < trash_x2 + 12'd16) && (hx1 > trash_x2) && (hy0 < trash_y2 + 12'd16) && (hy1 > trash_y2);
+	wire hitT3 = hard && (hx0 < trash_x3 + 12'd16) && (hx1 > trash_x3) && (hy0 < trash_y3 + 12'd16) && (hy1 > trash_y3);
+
+	wire hit_any = hit0 | hit1 | hit2 | hit3 | hit4 | hit5 | hitS | hitC |
+	               hitT0 | hitT1 | hitT2 | hitT3;
+	wire [3:0] hit_id = hitC  ? 4'd8  : hitS  ? 4'd7  :
+	                    hitT3 ? 4'd12 : hitT2 ? 4'd11 : hitT1 ? 4'd10 : hitT0 ? 4'd9 :
+	                    hit5  ? 4'd6  : hit4  ? 4'd5  : hit3  ? 4'd4  : hit2  ? 4'd3 :
+	                    hit1  ? 4'd2  : 4'd1;
 
 	// ---------- points ----------
 	reg signed [15:0] pts;
@@ -72,6 +95,7 @@ module Game_Control(
 			4'd5, 4'd6: pts = 16'sd50;     // large fish
 			4'd7:       pts = -16'sd50;    // shark
 			4'd8:       pts = 16'sd100;    // chest
+			4'd9, 4'd10, 4'd11, 4'd12: pts = -16'sd15;   // trash
 			default:    pts = 16'sd0;
 		endcase
 	end
@@ -89,15 +113,16 @@ module Game_Control(
 	assign d0 = absv % 16'd10;
 
 	initial begin
-		count = 0; hook_y = HOOK_MIN; state = S_FISH; caught = 0; respawn = 0; score = 0;
+		count = 0; hook_y = HOOK_MIN; state = S_FISH; caught = 0; respawn = 0; score = 0; drop = 0;
 	end
 
 	always @(posedge clk or negedge rst_n) begin
 		if (!rst_n) begin
 			count <= 0; hook_y <= HOOK_MIN; state <= S_FISH;
-			caught <= 4'd0; respawn <= 8'd0; score <= 16'sd0;
+			caught <= 4'd0; respawn <= 12'd0; score <= 16'sd0; drop <= 1'b0;
 		end else begin
-			respawn <= 8'd0;                    // pulses last one clock tick
+			respawn <= 12'd0;                   // pulses last one clock tick
+			drop <= 1'b0;
 			if (frame_tick) count <= 0; else count <= count + 1'b1;
 
 			case (state)
@@ -119,7 +144,12 @@ module Game_Control(
 
 				S_REEL: begin
 					if (frame_tick) begin
-						if (hook_y <= HOOK_MIN + rise) begin
+						if (caught == 4'd8 && shark_hits_chest) begin
+							drop <= 1'b1;            // the shark knocks the chest loose
+							caught <= 4'd0;
+							state <= S_FISH;
+						end
+						else if (hook_y <= HOOK_MIN + rise) begin
 							hook_y <= HOOK_MIN;
 							state <= S_SCORE;
 						end else
