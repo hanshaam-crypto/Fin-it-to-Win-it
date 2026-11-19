@@ -1,0 +1,33 @@
+// Draws the fishing line (from under the boat down to hook_y) and a small hook.
+module Hook_Sprite(
+	input [10:0] pixel_x,
+	input [9:0]  pixel_y,
+	input [10:0] hook_x,     // left edge of the boat
+	input [9:0]  hook_y,     // bottom of the hook
+	output reg   opaque,
+	output reg [7:0] red,
+	output reg [7:0] green,
+	output reg [7:0] blue
+);
+	localparam LINE_TOP = 10'd219;           // bottom of the boat
+	wire [10:0] line_x = hook_x + 11'd47;    // middle of the boat
+
+	always @(*) begin
+		opaque = 0; red = 8'h3C; green = 8'h3C; blue = 8'h46;
+
+		// the line (2 pixels wide)
+		if (pixel_x >= line_x && pixel_x < line_x + 11'd2 &&
+		    pixel_y >= LINE_TOP && pixel_y <= hook_y)
+			opaque = 1;
+
+		// bottom bar of the hook
+		if (pixel_x >= line_x && pixel_x < line_x + 11'd12 &&
+		    pixel_y + 10'd4 > hook_y && pixel_y <= hook_y)
+			opaque = 1;
+
+		// tip pointing up
+		if (pixel_x >= line_x + 11'd10 && pixel_x < line_x + 11'd12 &&
+		    pixel_y + 10'd12 > hook_y && pixel_y <= hook_y)
+			opaque = 1;
+	end
+endmodule

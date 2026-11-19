@@ -1,4 +1,3 @@
-
 module Fish_Sprite(
     input [10:0] pixel_x,
     input [9:0] pixel_y,
@@ -25,19 +24,19 @@ module Fish_Sprite(
     always @(*) begin
 
         if (fish_type <= 1) begin
-            sprite_scale = 2;
+            sprite_scale = 4;      // small: 2 pixels per art pixel
             fish_width = 32;
             fish_height = 16;
         end
         else if (fish_type <= 3) begin
-            sprite_scale = 3;
-            fish_width = 48;
-            fish_height = 24;
+            sprite_scale = 5;      // medium: 2.5 pixels per art pixel
+            fish_width = 40;
+            fish_height = 20;
         end
         else begin
-            sprite_scale = 4;
-            fish_width = 64;
-            fish_height = 32;
+            sprite_scale = 6;      // large: 3 pixels per art pixel
+            fish_width = 48;
+            fish_height = 24;
         end
 
         opaque = 0;
@@ -55,7 +54,7 @@ module Fish_Sprite(
             (pixel_y >= fish_y) &&
             (pixel_y < fish_y + fish_height)) begin
 
-            local_x = (pixel_x - fish_x) / sprite_scale;
+            local_x = ((pixel_x - fish_x) * 2) / sprite_scale;
 
             // Flip the fish horizontally when moving left
             if (fish_direction == 1)
@@ -63,7 +62,7 @@ module Fish_Sprite(
             else
                 sprite_col = 15 - local_x;
 
-            sprite_row = (pixel_y - fish_y) / sprite_scale;
+            sprite_row = ((pixel_y - fish_y) * 2) / sprite_scale;
 
             case(sprite_row)
                 0: row_data = 64'h0000001111000000;

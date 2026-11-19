@@ -1,0 +1,77 @@
+// Draws the boat (32x20 pixel art, each pixel drawn 3x3 = 96x60 on screen).
+module Boat_Sprite(
+	input [10:0] pixel_x,
+	input [9:0]  pixel_y,
+	input [10:0] boat_x,
+	input        boat_direction,   // 1 = facing right
+	output reg   opaque,
+	output reg [7:0] red,
+	output reg [7:0] green,
+	output reg [7:0] blue
+);
+	localparam TOP = 10'd159;
+
+	reg [10:0]  dx;
+	reg [9:0]   dy;
+	reg [4:0]   sx, sy, col;
+	reg [127:0] row_bits;
+	reg [3:0]   pix;
+
+	always @(*) begin
+		opaque = 0; red = 0; green = 0; blue = 0;
+		dx = 0; dy = 0; sx = 0; sy = 0; col = 0; row_bits = 0; pix = 0;
+
+		if (pixel_x >= boat_x && pixel_x < boat_x + 11'd96 &&
+		    pixel_y >= TOP    && pixel_y < TOP + 10'd60) begin
+
+			dx = pixel_x - boat_x;
+			dy = pixel_y - TOP;
+			sx = dx / 3;
+			sy = dy / 3;
+
+			// the art faces left; flip it when facing right
+			col = boat_direction ? (5'd31 - sx) : sx;
+
+			case (sy)
+				5'd0:  row_bits = 128'h00001000000000000000000000000000;
+				5'd1:  row_bits = 128'h00000100000000000000000000000000;
+				5'd2:  row_bits = 128'h00000010000000000000000000000000;
+				5'd3:  row_bits = 128'h00000001100000000002222222200000;
+				5'd4:  row_bits = 128'h00000000010000000022222222220000;
+				5'd5:  row_bits = 128'h00000000001000000000333333000000;
+				5'd6:  row_bits = 128'h00000000000100000000343333000000;
+				5'd7:  row_bits = 128'h00000000000010000000333333000000;
+				5'd8:  row_bits = 128'h00000000000001100000555555500000;
+				5'd9:  row_bits = 128'h00000000000000010333355555500000;
+				5'd10: row_bits = 128'h00000000000000001333355555500000;
+				5'd11: row_bits = 128'h00000000000000000100555555500000;
+				5'd12: row_bits = 128'h00000000000000006666666666600000;
+				5'd13: row_bits = 128'h00000000000000006666666666600000;
+				5'd14: row_bits = 128'h00777777777777777777777777777700;
+				5'd15: row_bits = 128'h00088888888888888888888888888000;
+				5'd16: row_bits = 128'h00008888888888888888888888880000;
+				5'd17: row_bits = 128'h00000888888888888888888888800000;
+				5'd18: row_bits = 128'h00000088888888888888888888000000;
+				5'd19: row_bits = 128'h00000000888888888888888800000000;
+				default: row_bits = 128'd0;
+			endcase
+
+			pix = row_bits[(5'd31 - col) * 4 +: 4];
+
+			if (pix != 0) begin
+				opaque = 1;
+				case (pix)
+					4'd1: begin red = 8'h3C; green = 8'h3C; blue = 8'h46; end // rod
+					4'd2: begin red = 8'h46; green = 8'h82; blue = 8'h3C; end // hat
+					4'd3: begin red = 8'hFA; green = 8'hCD; blue = 8'hA0; end // skin
+					4'd4: begin red = 8'h00; green = 8'h00; blue = 8'h00; end // eye
+					4'd5: begin red = 8'hF0; green = 8'h96; blue = 8'h3C; end // vest
+					4'd6: begin red = 8'h5A; green = 8'h64; blue = 8'h78; end // pants
+					4'd7: begin red = 8'h50; green = 8'h32; blue = 8'h1E; end // rim
+					4'd8: begin red = 8'h82; green = 8'h55; blue = 8'h32; end // wood
+					default: begin red = 8'hFF; green = 8'h00; blue = 8'hFF; end
+				endcase
+			end
+		end
+	end
+endmodule

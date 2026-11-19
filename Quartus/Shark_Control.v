@@ -1,0 +1,70 @@
+// Moves the shark across the screen. When it swims completely off one side,
+// it waits a random time, then comes back from a random side at a random depth.
+// When respawn pulses (it was caught and delivered), it does the same thing.
+module Shark_Control(
+	input clk,
+	input rst_n,
+	input respawn,
+	output reg [10:0] shark_x,         // the shark's x position PLUS 112
+	output reg [9:0]  shark_y,         // top of the shark
+	output reg        shark_direction  // 1 = swimming right, 0 = swimming left
+);
+	localparam SPEED     = 11'd3;
+	localparam RIGHT_END = 11'd752;    // 640 + 112: fully off the right side
+
+	reg [19:0] count;
+	wire frame_tick = (count == 20'd833332);
+
+	reg [15:0] lfsr;
+	reg [8:0]  wait_frames;
+
+	initial begin
+		count = 0; lfsr = 16'hC0DE; shark_x = 11'd0; shark_y = 10'd350;
+		shark_direction = 1'b1; wait_frames = 9'd120;
+	end
+
+	always @(posedge clk or negedge rst_n) begin
+		if (!rst_n) begin
+			count <= 0;
+			lfsr <= 16'hC0DE;
+			shark_x <= 11'd0;
+			shark_y <= 10'd350;
+			shark_direction <= 1'b1;
+			wait_frames <= 9'd120;
+		end else begin
+			if (frame_tick) count <= 0; else count <= count + 1'b1;
+
+			if (respawn) begin
+				shark_direction <= lfsr[8];
+				shark_x <= lfsr[8] ? 11'd0 : RIGHT_END;
+				shark_y <= 10'd288 + lfsr[6:0];
+				wait_frames <= {1'b0, lfsr[7:0]} + 9'd30;
+			end
+			else if (frame_tick) begin
+				lfsr <= {lfsr[14:0], lfsr[15] ^ lfsr[13] ^ lfsr[12] ^ lfsr[10]};
+
+				if (wait_frames != 0) begin
+					wait_frames <= wait_frames - 1'b1;
+				end
+				else if (shark_direction) begin
+					if (shark_x + SPEED >= RIGHT_END) begin
+						shark_direction <= lfsr[8];
+						shark_x <= lfsr[8] ? 11'd0 : RIGHT_END;
+						shark_y <= 10'd288 + lfsr[6:0];
+						wait_frames <= {1'b0, lfsr[7:0]} + 9'd30;
+					end else
+						shark_x <= shark_x + SPEED;
+				end
+				else begin
+					if (shark_x <= SPEED) begin
+						shark_direction <= lfsr[8];
+						shark_x <= lfsr[8] ? 11'd0 : RIGHT_END;
+						shark_y <= 10'd288 + lfsr[6:0];
+						wait_frames <= {1'b0, lfsr[7:0]} + 9'd30;
+					end else
+						shark_x <= shark_x - SPEED;
+				end
+			end
+		end
+	end
+endmodule
