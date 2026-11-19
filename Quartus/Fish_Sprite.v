@@ -1,9 +1,11 @@
+
 module Fish_Sprite(
     input [10:0] pixel_x,
     input [9:0] pixel_y,
     input [10:0] fish_x,
     input [9:0] fish_y,
     input [2:0] fish_type,
+    input fish_direction,
     output reg opaque,
     output reg [7:0] red,
     output reg [7:0] green,
@@ -18,42 +20,49 @@ module Fish_Sprite(
     reg [3:0] sprite_row;
     reg [63:0] row_data;
     reg [3:0] pixel_code;
+    reg [10:0] local_x;
 
     always @(*) begin
 
-			// Choose fish size for the 640x480 VGA screen
-			if (fish_type <= 1) begin
-				 sprite_scale = 2;
-				 fish_width = 32;
-				 fish_height = 16;
-			end
-			else if (fish_type <= 3) begin
-				 sprite_scale = 3;
-				 fish_width = 48;
-				 fish_height = 24;
-			end
-			else begin
-				 sprite_scale = 4;
-				 fish_width = 64;
-				 fish_height = 32;
-			end
-			
+        if (fish_type <= 1) begin
+            sprite_scale = 2;
+            fish_width = 32;
+            fish_height = 16;
+        end
+        else if (fish_type <= 3) begin
+            sprite_scale = 3;
+            fish_width = 48;
+            fish_height = 24;
+        end
+        else begin
+            sprite_scale = 4;
+            fish_width = 64;
+            fish_height = 32;
+        end
+
         opaque = 0;
         red = 0;
         green = 0;
         blue = 0;
-
         sprite_col = 0;
         sprite_row = 0;
         row_data = 0;
         pixel_code = 0;
+        local_x = 0;
 
         if ((pixel_x >= fish_x) &&
             (pixel_x < fish_x + fish_width) &&
             (pixel_y >= fish_y) &&
             (pixel_y < fish_y + fish_height)) begin
 
-            sprite_col = (pixel_x - fish_x) / sprite_scale;
+            local_x = (pixel_x - fish_x) / sprite_scale;
+
+            // Flip the fish horizontally when moving left
+            if (fish_direction == 1)
+                sprite_col = local_x;
+            else
+                sprite_col = 15 - local_x;
+
             sprite_row = (pixel_y - fish_y) / sprite_scale;
 
             case(sprite_row)
@@ -78,7 +87,6 @@ module Fish_Sprite(
                     green = 0;
                     blue = 0;
                 end
-
                 else if (pixel_code == 1) begin
                     case(fish_type)
                         0: begin red=30; green=30; blue=60; end
@@ -90,7 +98,6 @@ module Fish_Sprite(
                         default: begin red=30; green=30; blue=60; end
                     endcase
                 end
-
                 else begin
                     case(fish_type)
                         0: begin red=140; green=150; blue=170; end
@@ -107,4 +114,5 @@ module Fish_Sprite(
     end
 
 endmodule
+
 
