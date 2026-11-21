@@ -1,6 +1,7 @@
 // Draws the score board as a wooden hanging sign (chunky pixel art, every art
 // pixel is 3x3 screen pixels, like the fisherman and the fish).
-// Size 150 x 51, starts right after the title and ends 20 pixels from the right edge.
+// Size 150 x 51, under the title. The score sign and the timer sign (to its
+// right) are centered under the title as a pair. Chains start just below the title.
 module Scoreboard(
 	input [10:0] pixel_x,
 	input [9:0]  pixel_y,
@@ -11,10 +12,11 @@ module Scoreboard(
 	output reg [7:0] green,
 	output reg [7:0] blue
 );
-	localparam BOARD_X = 470;
-	localparam BOARD_Y = 22;
+	localparam BOARD_X = 212;     // sign + 12 gap + timer = 216 wide, centered on x 320
+	localparam BOARD_Y = 42;   // was 22 (lowered 20 pixels)
 	localparam BOARD_W = 150;     // 50 art pixels
 	localparam BOARD_H = 51;      // 17 art pixels
+	localparam CHAIN_TOP = 33;            // chains start at the bottom of the title banner
 	localparam CH1     = BOARD_X + 18;    // left chain
 	localparam CH2     = BOARD_X + 126;   // right chain
 	localparam TEXT_TOP = BOARD_Y + 18;   // text is 14 pixels tall, centered on the sign
@@ -62,10 +64,10 @@ module Scoreboard(
 		code = 5'd17; rows = 0; bits = 0;
 
 		// ---------- the two chains (block links: 2 wide, 2 tall, 1 gap) ----------
-		if (py < BOARD_Y + 3 &&
+		if (py >= CHAIN_TOP && py < BOARD_Y + 3 &&
 		    ((px >= CH1 && px < CH1 + 6) || (px >= CH2 && px < CH2 + 6))) begin
 			cx = (px >= CH2) ? (px - CH2) : (px - CH1);   // 0..5
-			cy = (py / 3) % 3;                             // 0,1 = link, 2 = gap
+			cy = ((py - CHAIN_TOP) / 3) % 3;               // 0,1 = link, 2 = gap
 			if (cy != 2) begin
 				opaque = 1;
 				if (cx < 3) begin red = 165; green = 170; blue = 182; end   // light side

@@ -1,0 +1,124 @@
+// Draws the decorative coral on the sea floor.
+// Each coral is 16x16 pixel art, each art pixel drawn 3x3 (48x48 on screen),
+// like the chest and the fish. The bottom two art rows sit in the sand.
+//
+// The screen is split into 7 slots, 91 pixels wide. Each slot has one coral.
+// Where it sits in the slot, its shape, its color and whether it is mirrored
+// all come from "layout" (made by Coral_Control), 11 bits per coral:
+//   [5:0]  x offset inside the slot (0..43)
+//   [7:6]  shape: 0 = branch, 1 = fan, 2 = bush
+//   [9:8]  color: 0 = red, 1 = pink, 2 = orange, 3 = purple
+//   [10]   1 = mirrored
+module Coral_Sprite(
+	input [10:0] pixel_x,
+	input [9:0]  pixel_y,
+	input [76:0] layout,
+	output reg   opaque,
+	output reg [7:0] red,
+	output reg [7:0] green,
+	output reg [7:0] blue
+);
+	localparam TOP  = 414;     // top of the coral (bottom is 461, sand starts at 456)
+	localparam SLOT = 91;      // slot width
+
+	integer px, py, slot, lx;
+	reg [10:0] cfg;
+	reg [3:0]  ax, ay, col;
+	reg [63:0] row;
+	reg [3:0]  pix;
+
+	always @(*) begin
+		opaque = 0; red = 0; green = 0; blue = 0;
+		px = pixel_x; py = pixel_y;
+		slot = 0; lx = 0; cfg = 0; ax = 0; ay = 0; col = 0; row = 0; pix = 0;
+
+		if (py >= TOP && py < TOP + 48 && px < 7 * SLOT) begin
+			slot = px / SLOT;
+			cfg  = layout[slot * 11 +: 11];
+			lx   = px - slot * SLOT - cfg[5:0];
+
+			if (lx >= 0 && lx < 48) begin
+				ax  = lx / 3;
+				ay  = (py - TOP) / 3;
+				col = cfg[10] ? (4'd15 - ax) : ax;
+
+				// 0 = empty, 1 = dark, 2 = main color, 3 = highlight
+				case ({cfg[7:6], ay})
+					// shape 0: branch
+					{2'd0, 4'd0}: row = 64'h0000020000020000;
+					{2'd0, 4'd1}: row = 64'h0020023000230200;
+					{2'd0, 4'd2}: row = 64'h0023023020230230;
+					{2'd0, 4'd3}: row = 64'h0002323023023200;
+					{2'd0, 4'd4}: row = 64'h2000223023002202;
+					{2'd0, 4'd5}: row = 64'h2300023223002323;
+					{2'd0, 4'd6}: row = 64'h0230022320022320;
+					{2'd0, 4'd7}: row = 64'h0023223220223200;
+					{2'd0, 4'd8}: row = 64'h0002232222231000;
+					{2'd0, 4'd9}: row = 64'h0000122222210000;
+					{2'd0, 4'd10}: row = 64'h0000012222100000;
+					{2'd0, 4'd11}: row = 64'h0000002221000000;
+					{2'd0, 4'd12}: row = 64'h0000002221000000;
+					{2'd0, 4'd13}: row = 64'h0000012222100000;
+					{2'd0, 4'd14}: row = 64'h0000112222110000;
+					{2'd0, 4'd15}: row = 64'h0001111111111000;
+					// shape 1: fan
+					{2'd1, 4'd0}: row = 64'h0000003200000000;
+					{2'd1, 4'd1}: row = 64'h0032003210032000;
+					{2'd1, 4'd2}: row = 64'h0032103210032100;
+					{2'd1, 4'd3}: row = 64'h0032103210321032;
+					{2'd1, 4'd4}: row = 64'h3203213210321032;
+					{2'd1, 4'd5}: row = 64'h3210323213210321;
+					{2'd1, 4'd6}: row = 64'h0321032222103210;
+					{2'd1, 4'd7}: row = 64'h0032132222132100;
+					{2'd1, 4'd8}: row = 64'h0003222222221000;
+					{2'd1, 4'd9}: row = 64'h0000122222210000;
+					{2'd1, 4'd10}: row = 64'h0000012222100000;
+					{2'd1, 4'd11}: row = 64'h0000002221000000;
+					{2'd1, 4'd12}: row = 64'h0000002221000000;
+					{2'd1, 4'd13}: row = 64'h0000012222100000;
+					{2'd1, 4'd14}: row = 64'h0000112222110000;
+					{2'd1, 4'd15}: row = 64'h0001111111111000;
+					// shape 2: bush
+					{2'd2, 4'd0}: row = 64'h0000000000000000;
+					{2'd2, 4'd1}: row = 64'h0000000000000000;
+					{2'd2, 4'd2}: row = 64'h0000000000000000;
+					{2'd2, 4'd3}: row = 64'h0000000000000000;
+					{2'd2, 4'd4}: row = 64'h0000200000020000;
+					{2'd2, 4'd5}: row = 64'h0020230020023020;
+					{2'd2, 4'd6}: row = 64'h0023230023023230;
+					{2'd2, 4'd7}: row = 64'h0202320232023200;
+					{2'd2, 4'd8}: row = 64'h0230223232232020;
+					{2'd2, 4'd9}: row = 64'h0023012222210230;
+					{2'd2, 4'd10}: row = 64'h0002231222122300;
+					{2'd2, 4'd11}: row = 64'h0000122222221000;
+					{2'd2, 4'd12}: row = 64'h0000012222210000;
+					{2'd2, 4'd13}: row = 64'h0000012222210000;
+					{2'd2, 4'd14}: row = 64'h0000112222211000;
+					{2'd2, 4'd15}: row = 64'h0001111111111100;
+					default: row = 64'd0;
+				endcase
+
+				pix = row[(4'd15 - col) * 4 +: 4];
+
+				if (pix != 0) begin
+					opaque = 1;
+					case ({cfg[9:8], pix[1:0]})
+					{2'd0, 2'd1}: begin red = 8'd110; green = 8'd20; blue = 8'd30; end   // red dark
+					{2'd0, 2'd2}: begin red = 8'd200; green = 8'd40; blue = 8'd45; end   // red main
+					{2'd0, 2'd3}: begin red = 8'd255; green = 8'd105; blue = 8'd85; end   // red light
+					{2'd1, 2'd1}: begin red = 8'd140; green = 8'd40; blue = 8'd85; end   // pink dark
+					{2'd1, 2'd2}: begin red = 8'd230; green = 8'd95; blue = 8'd140; end   // pink main
+					{2'd1, 2'd3}: begin red = 8'd255; green = 8'd170; blue = 8'd195; end   // pink light
+					{2'd2, 2'd1}: begin red = 8'd150; green = 8'd65; blue = 8'd30; end   // orange dark
+					{2'd2, 2'd2}: begin red = 8'd235; green = 8'd120; blue = 8'd55; end   // orange main
+					{2'd2, 2'd3}: begin red = 8'd255; green = 8'd185; blue = 8'd115; end   // orange light
+					{2'd3, 2'd1}: begin red = 8'd60; green = 8'd45; blue = 8'd120; end   // purple dark
+					{2'd3, 2'd2}: begin red = 8'd115; green = 8'd90; blue = 8'd190; end   // purple main
+					{2'd3, 2'd3}: begin red = 8'd170; green = 8'd150; blue = 8'd240; end   // purple light
+						default: begin red = 8'd255; green = 8'd0; blue = 8'd255; end
+					endcase
+				end
+			end
+		end
+	end
+endmodule

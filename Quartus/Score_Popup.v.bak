@@ -1,0 +1,133 @@
+// Shows the points from a catch ("+15", "+100", "-50" ...) just left of the
+// score sign. It pops up when show pulses, stays for a moment, then drifts up
+// a few pixels while fading out (under a second in total).
+// Drawn in 2x white 5x7 digits with a dark shadow, right edge at x = RX.
+// alpha tells the top file how see-through to draw it: 0 = invisible, 16 = solid.
+module Score_Popup(
+	input clk,
+	input rst_n,
+	input show,                    // one-clock pulse: points were just added
+	input signed [15:0] pts,       // how many points (can be negative)
+	input [10:0] pixel_x,
+	input [9:0]  pixel_y,
+	output reg   on,               // 1 = this pixel is part of the text
+	output reg   shadow,           // 1 = this pixel is part of the text's shadow
+	output reg [4:0] alpha         // 0 = invisible ... 16 = solid
+);
+	localparam RX     = 206;       // right edge of the text (score sign starts at 212)
+	localparam START_Y = 62;       // top of the text when it pops up
+	localparam HOLD   = 6'd14;     // frames at full strength (~0.25 s)
+	localparam FADE_STEP = 2'd2;   // frames per fade step (16 steps = ~0.5 s)
+	localparam RISE_STEP = 3'd5;   // frames per pixel it drifts up
+
+	// about 60 ticks per second
+	reg [19:0] count;
+	wire frame_tick = (count == 20'd833332);
+
+	reg        neg;                // 1 = show a minus sign
+	reg [3:0]  hun, ten, one;      // the digits
+	reg [5:0]  hold_t;
+	reg [1:0]  fade_t;
+	reg [2:0]  rise_t;
+	reg [9:0]  top_y;
+
+	// split the points into digits when they arrive (0..999)
+	wire [15:0] absv = pts[15] ? (~pts + 16'd1) : pts;
+	wire [9:0]  a10  = (absv > 16'd999) ? 10'd999 : absv[9:0];
+
+	initial begin
+		count = 0; alpha = 0; neg = 0; hun = 0; ten = 0; one = 0;
+		hold_t = 0; fade_t = 0; rise_t = 0; top_y = START_Y;
+	end
+
+	always @(posedge clk or negedge rst_n) begin
+		if (!rst_n) begin
+			count <= 0; alpha <= 0; hold_t <= 0; fade_t <= 0; rise_t <= 0; top_y <= START_Y;
+		end else begin
+			if (frame_tick) count <= 0; else count <= count + 1'b1;
+
+			if (show) begin
+				// new points: pop up at full strength
+				neg <= pts[15];
+				hun <= a10 / 10'd100;
+				ten <= (a10 / 10'd10) % 10'd10;
+				one <= a10 % 10'd10;
+				alpha <= 5'd16; hold_t <= 0; fade_t <= 0; rise_t <= 0; top_y <= START_Y;
+			end
+			else if (frame_tick && alpha != 5'd0) begin
+				// drift up slowly the whole time it is showing
+				if (rise_t == RISE_STEP - 1) begin rise_t <= 0; top_y <= top_y - 1'b1; end
+				else rise_t <= rise_t + 1'b1;
+
+				// hold, then fade
+				if (hold_t < HOLD) hold_t <= hold_t + 1'b1;
+				else if (fade_t == FADE_STEP - 1) begin fade_t <= 0; alpha <= alpha - 1'b1; end
+				else fade_t <= fade_t + 1'b1;
+			end
+		end
+	end
+
+	// ---------- drawing ----------
+	// 5x7 glyphs: 0-9 digits, 10 = plus, 11 = minus
+	function [34:0] glyph;
+		input [3:0] c;
+		begin
+			case (c)
+				4'd0:  glyph = 35'b01110_10001_10011_10101_11001_10001_01110;
+				4'd1:  glyph = 35'b00100_01100_00100_00100_00100_00100_01110;
+				4'd2:  glyph = 35'b01110_10001_00001_00010_00100_01000_11111;
+				4'd3:  glyph = 35'b11110_00001_00001_01110_00001_00001_11110;
+				4'd4:  glyph = 35'b00010_00110_01010_10010_11111_00010_00010;
+				4'd5:  glyph = 35'b11111_10000_11110_00001_00001_10001_01110;
+				4'd6:  glyph = 35'b00110_01000_10000_11110_10001_10001_01110;
+				4'd7:  glyph = 35'b11111_00001_00010_00100_01000_01000_01000;
+				4'd8:  glyph = 35'b01110_10001_10001_01110_10001_10001_01110;
+				4'd9:  glyph = 35'b01110_10001_10001_01111_00001_00010_01100;
+				4'd10: glyph = 35'b00000_00100_00100_11111_00100_00100_00000;   // +
+				4'd11: glyph = 35'b00000_00000_00000_11111_00000_00000_00000;   // -
+				default: glyph = 35'd0;
+			endcase
+		end
+	endfunction
+
+	// is the text lit at (px, py)?
+	function lit;
+		input integer px, py;
+		input [9:0] ty;
+		input       n;
+		input [3:0] h, t, o;
+		integer nd, total, left, rx, k, w, gx, gy;
+		reg [3:0]  code;
+		reg [34:0] rows;
+		reg [4:0]  bits;
+		begin
+			lit = 0;
+			nd = (h != 0) ? 3 : (t != 0) ? 2 : 1;
+			total = 1 + nd;                   // sign + digits
+			left  = RX - total * 12;          // 12 pixels per character
+			if (px >= left && px < RX && py >= ty && py < ty + 14) begin
+				rx = px - left;
+				k  = rx / 12;                 // which character
+				w  = rx % 12;
+				gx = w / 2;                   // font column 0..5 (5 is the gap)
+				gy = (py - ty) / 2;           // font row 0..6
+				if (k == 0)                code = n ? 4'd11 : 4'd10;
+				else if (k == total - 1)   code = o;
+				else if (k == total - 2)   code = t;
+				else                       code = h;
+				rows = glyph(code);
+				bits = rows[(6 - gy) * 5 +: 5];
+				if (gx < 5) lit = bits[4 - gx];
+			end
+		end
+	endfunction
+
+	always @(*) begin
+		on = 0; shadow = 0;
+		if (alpha != 5'd0) begin
+			on     = lit(pixel_x, pixel_y, top_y, neg, hun, ten, one);
+			// dark shadow 2 pixels down-right, so it reads over sky and clouds
+			shadow = !on && lit(pixel_x - 2, pixel_y - 2, top_y, neg, hun, ten, one);
+		end
+	end
+endmodule

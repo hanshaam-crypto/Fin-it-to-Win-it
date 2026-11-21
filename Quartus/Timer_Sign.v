@@ -1,5 +1,5 @@
-// Draws the timer as a small wooden sign (chunky 3x3 pixel art) hanging from
-// the score sign on two chains. It shows the seconds left as two digits.
+// Draws the timer as a small wooden sign (chunky 3x3 pixel art) hanging on
+// two chains to the right of the score sign, from just below the title. It shows the seconds left as two digits.
 // The digits turn red for the last 10 seconds.
 module Timer_Sign(
 	input [10:0] pixel_x,
@@ -10,13 +10,13 @@ module Timer_Sign(
 	output reg [7:0] green,
 	output reg [7:0] blue
 );
-	localparam X  = 518;          // centered under the score sign
-	localparam Y  = 85;
+	localparam X  = 374;          // 12 pixels right of the score sign
+	localparam Y  = 52;           // lined up with the middle of the score sign
 	localparam W  = 54;           // 18 art pixels
 	localparam H  = 30;           // 10 art pixels
 	localparam CH1 = X + 9;       // left chain
 	localparam CH2 = X + 39;      // right chain
-	localparam CHAIN_TOP = 70;    // chains start inside the bottom of the score sign
+	localparam CHAIN_TOP = 33;    // chains start at the bottom of the title banner
 	localparam TEXT_TOP = Y + 4;  // digits are 21 pixels tall
 
 	// 5x7 digits, top row first

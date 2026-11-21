@@ -57,6 +57,14 @@ module fin_it_to_win_it(
     wire drop;                  // pulses when the chest is dropped
     wire [3:0]  d3, d2, d1, d0; // score digits
     wire score_neg;
+    wire signed [15:0] score_val;    // the score itself
+    wire pop;                        // pulses when points are added
+    wire signed [15:0] pop_pts;      // how many points that was
+    wire eat_pop;                    // pulses when the shark eats a fish
+
+    // goal: 200 on Easy, 300 on Hard
+    wire [15:0] goal = hard_mode ? 16'd300 : 16'd200;
+    wire win = !score_val[15] && (score_val >= goal);
 
     // Fish positions, directions and display signals
     wire [10:0] fish0_x, fish1_x, fish2_x, fish3_x, fish4_x, fish5_x;
@@ -79,6 +87,8 @@ module fin_it_to_win_it(
 
     // Chest signals
     wire [10:0] chest_x;
+    wire [9:0]  chest_y;
+    wire [4:0]  chest_a;     // fade level (0 = invisible, 16 = solid)
     wire chest_opaque;
     wire [7:0] chest_red, chest_green, chest_blue;
 
@@ -86,6 +96,7 @@ module fin_it_to_win_it(
     wire [10:0] tr0_x, tr1_x, tr2_x, tr3_x;
     wire [9:0]  tr0_y, tr1_y, tr2_y, tr3_y;
     wire tr0_op, tr1_op, tr2_op, tr3_op;
+    wire [4:0] tr0_a, tr1_a, tr2_a, tr3_a;   // fade level (0 = invisible, 16 = solid)
     wire [7:0] tr0_r, tr0_g, tr0_b;
     wire [7:0] tr1_r, tr1_g, tr1_b;
     wire [7:0] tr2_r, tr2_g, tr2_b;
@@ -102,16 +113,20 @@ module fin_it_to_win_it(
     wire        active_pixels;
     wire [9:0]  vx, vy;
 
+    // the driver's sync/blank signals go through the output registers at
+    // the bottom of this file, together with the colors
+    wire hs_raw, vs_raw, blank_raw;
+
     vga_driver the_vga(
         .clk(CLOCK_50),
         .rst(KEY[0]),
         .vga_clk(VGA_CLK),
-        .hsync(VGA_HS),
-        .vsync(VGA_VS),
+        .hsync(hs_raw),
+        .vsync(vs_raw),
         .active_pixels(active_pixels),
         .xPixel(vx),
         .yPixel(vy),
-        .VGA_BLANK_N(VGA_BLANK_N),
+        .VGA_BLANK_N(blank_raw),
         .VGA_SYNC_N(VGA_SYNC_N)
     );
 
@@ -122,7 +137,9 @@ module fin_it_to_win_it(
     // Level menu: KEY2 = Easy, KEY1 = Hard, KEY3 = start
     // ------------------------------------------------
 
-    Menu_Control MC0(CLOCK_50, KEY[0], ~KEY[2], ~KEY[1], ~KEY[3], playing, hard_mode);
+    // sys_rst_n (KEY0 or TRY AGAIN) sends the game back to the level menu.
+    // KEY0 also sets the level back to Easy; TRY AGAIN keeps the last level highlighted.
+    Menu_Control MC0(CLOCK_50, sys_rst_n, KEY[0], ~KEY[2], ~KEY[1], ~KEY[3], playing, hard_mode);
 
     Menu_Overlay MO0(pixel_x, pixel_y, hard_mode, menu_on, menu_r, menu_g, menu_b);
 
@@ -136,7 +153,7 @@ module fin_it_to_win_it(
 
     Restart_Control RC0(CLOCK_50, time_up, ~KEY[3], restart_n);
 
-    GameOver_Overlay GO0(pixel_x, pixel_y, go_on, go_r, go_g, go_b);
+    GameOver_Overlay GO0(pixel_x, pixel_y, score_neg, d3, d2, d1, d0, hard_mode, win, go_on, go_r, go_g, go_b);
 
     // ------------------------------------------------
     // Boat: KEY[1] = right, KEY[2] = left (buttons are active-low)
@@ -180,11 +197,13 @@ module fin_it_to_win_it(
         .rst_n(sys_rst_n),
         .button(~KEY[3] & game_on),
         .hard(hard_mode),
+        .run(game_on),
         .hook_x(hook_x),
         .fish_x0(fish0_x), .fish_x1(fish1_x), .fish_x2(fish2_x),
         .fish_x3(fish3_x), .fish_x4(fish4_x), .fish_x5(fish5_x),
         .shark_x(shark_x), .shark_y(shark_y),
         .chest_x(chest_x),
+        .chest_y(chest_y),
         .trash_x0(tr0_x), .trash_x1(tr1_x), .trash_x2(tr2_x), .trash_x3(tr3_x),
         .trash_y0(tr0_y), .trash_y1(tr1_y), .trash_y2(tr2_y), .trash_y3(tr3_y),
         .hook_y(hook_y),
@@ -192,7 +211,11 @@ module fin_it_to_win_it(
         .respawn(respawn),
         .drop(drop),
         .d3(d3), .d2(d2), .d1(d1), .d0(d0),
-        .score_neg(score_neg)
+        .score_neg(score_neg),
+        .score_out(score_val),
+        .pop(pop),
+        .pop_pts(pop_pts),
+        .eat_pop(eat_pop)
     );
 
     // ------------------------------------------------
@@ -220,7 +243,8 @@ module fin_it_to_win_it(
     wire [9:0]  sh_dy = (caught == 4'd7) ? (hook_y - 10'd21) : shark_y;
 
     wire [10:0] ch_dx = (caught == 4'd8) ? att_lx : chest_x;
-    wire [9:0]  ch_dy = (caught == 4'd8) ? (hook_y - 10'd18) : 10'd438;
+    wire [9:0]  ch_dy = (caught == 4'd8) ? (hook_y - 10'd18) : chest_y;
+    wire [4:0]  ch_a  = (caught == 4'd8) ? 5'd16 : chest_a;   // solid while on the hook
 
     // bottles are 12x24, pop tabs are 16x16
     wire [10:0] t0_dx = (caught == 4'd9)  ? (hook_x - 11'd6) : tr0_x;
@@ -231,6 +255,12 @@ module fin_it_to_win_it(
     wire [9:0]  t2_dy = (caught == 4'd11) ? (hook_y - 10'd8)  : tr2_y;
     wire [10:0] t3_dx = (caught == 4'd12) ? (hook_x - 11'd8) : tr3_x;
     wire [9:0]  t3_dy = (caught == 4'd12) ? (hook_y - 10'd8)  : tr3_y;
+
+    // fade level used to draw each piece of trash (solid while on the hook)
+    wire [4:0] t0_a = (caught == 4'd9)  ? 5'd16 : tr0_a;
+    wire [4:0] t1_a = (caught == 4'd10) ? 5'd16 : tr1_a;
+    wire [4:0] t2_a = (caught == 4'd11) ? 5'd16 : tr2_a;
+    wire [4:0] t3_a = (caught == 4'd12) ? 5'd16 : tr3_a;
 
     // ------------------------------------------------
     // Fish: small near the top of the water, large near the sand
@@ -268,7 +298,7 @@ module fin_it_to_win_it(
     // where a dropped chest lands (kept on the screen)
     wire [10:0] chest_drop_x = (att_lx > 11'd592) ? 11'd592 : att_lx;
 
-    Chest_Control CC0(CLOCK_50, sys_rst_n, respawn[7], drop, chest_drop_x, chest_x);
+    Chest_Control CC0(CLOCK_50, sys_rst_n, respawn[7], drop, chest_drop_x, chest_x, chest_y, chest_a);
 
     Chest_Sprite CS0(
         pixel_x, pixel_y, ch_dx, ch_dy,
@@ -279,10 +309,10 @@ module fin_it_to_win_it(
     // Trash (only shown and only hookable on the hard level)
     // ------------------------------------------------
 
-    Trash_Control #(.INIT_X(100), .INIT_Y(260), .SEED(16'hA5A5)) TR0(CLOCK_50, sys_rst_n, respawn[8],  tr0_x, tr0_y);
-    Trash_Control #(.INIT_X(450), .INIT_Y(330), .SEED(16'h3C3C)) TR1(CLOCK_50, sys_rst_n, respawn[9],  tr1_x, tr1_y);
-    Trash_Control #(.INIT_X(280), .INIT_Y(380), .SEED(16'h7E7E)) TR2(CLOCK_50, sys_rst_n, respawn[10], tr2_x, tr2_y);
-    Trash_Control #(.INIT_X(540), .INIT_Y(240), .SEED(16'h1B1B)) TR3(CLOCK_50, sys_rst_n, respawn[11], tr3_x, tr3_y);
+    Trash_Control #(.INIT_X(100), .INIT_Y(260), .SEED(16'hA5A5)) TR0(CLOCK_50, sys_rst_n, respawn[8],  tr0_x, tr0_y, tr0_a);
+    Trash_Control #(.INIT_X(450), .INIT_Y(330), .SEED(16'h3C3C)) TR1(CLOCK_50, sys_rst_n, respawn[9],  tr1_x, tr1_y, tr1_a);
+    Trash_Control #(.INIT_X(280), .INIT_Y(380), .SEED(16'h7E7E)) TR2(CLOCK_50, sys_rst_n, respawn[10], tr2_x, tr2_y, tr2_a);
+    Trash_Control #(.INIT_X(540), .INIT_Y(240), .SEED(16'h1B1B)) TR3(CLOCK_50, sys_rst_n, respawn[11], tr3_x, tr3_y, tr3_a);
 
     Trash_Sprite #(.KIND(0)) TS0(pixel_x, pixel_y, t0_dx, t0_dy, tr0_op, tr0_r, tr0_g, tr0_b);
     Trash_Sprite #(.KIND(0)) TS1(pixel_x, pixel_y, t1_dx, t1_dy, tr1_op, tr1_r, tr1_g, tr1_b);
@@ -298,6 +328,26 @@ module fin_it_to_win_it(
         score_neg, d3, d2, d1, d0,
         sb_opaque, sb_red, sb_green, sb_blue
     );
+
+    // ------------------------------------------------
+    // Coral on the sea floor (fixed spots, different heights)
+    //   SHAPE: 0 = branch, 1 = fan, 2 = short bush, 3 = tall tree, 4 = medium wide
+    //   COLOR: 0 = red, 1 = pink, 2 = orange, 3 = purple
+    //   BOTTOM: how deep the base sits in the sand (sand is y 456..479)
+    // ------------------------------------------------
+
+    wire cr0_op, cr1_op, cr2_op, cr3_op;
+    wire [7:0] cr0_r, cr0_g, cr0_b, cr1_r, cr1_g, cr1_b;
+    wire [7:0] cr2_r, cr2_g, cr2_b, cr3_r, cr3_g, cr3_b;
+
+    Coral_Sprite #(.X0(34),  .SHAPE(3), .COLOR(1), .FLIP(0), .BOTTOM(468))   // tall pink tree
+        CR0(pixel_x, pixel_y, cr0_op, cr0_r, cr0_g, cr0_b);
+    Coral_Sprite #(.X0(199), .SHAPE(2), .COLOR(2), .FLIP(1), .BOTTOM(460))   // short orange bush
+        CR1(pixel_x, pixel_y, cr1_op, cr1_r, cr1_g, cr1_b);
+    Coral_Sprite #(.X0(379), .SHAPE(4), .COLOR(0), .FLIP(0), .BOTTOM(465))   // medium red, wide
+        CR2(pixel_x, pixel_y, cr2_op, cr2_r, cr2_g, cr2_b);
+    Coral_Sprite #(.X0(549), .SHAPE(0), .COLOR(3), .FLIP(1), .BOTTOM(471))   // purple branch
+        CR3(pixel_x, pixel_y, cr3_op, cr3_r, cr3_g, cr3_b);
 
     // ------------------------------------------------
     // Clouds (drift slowly to the right and loop around)
@@ -336,15 +386,71 @@ module fin_it_to_win_it(
     Text_Line #(.X0(176), .Y0(4), .SCALE(3), .LEN(16), .TEXT("Fin It To Win It"))
         TT0(pixel_x, pixel_y, title_on);
 
-    // Controls on the far left, in the sky
-    Text_Line #(.X0(8), .Y0(32),  .SCALE(2), .LEN(12), .TEXT("KEY 1  RIGHT"))
+    // The controls and points fade away 7 seconds into a round, and come back on the menu
+    wire [4:0] ctl_alpha;     // 16 = fully shown ... 0 = gone
+    Fade_Control FD0(CLOCK_50, playing, ctl_alpha);
+
+    // mixes a color into what is already on the screen: a = 0..16
+    function [7:0] blend;
+        input [7:0] back;
+        input [7:0] front;
+        input [4:0] a;
+        reg [12:0] mix;
+        begin
+            mix = back * (5'd16 - a) + front * a;
+            blend = mix[11:4];      // divide by 16
+        end
+    endfunction
+
+    // Controls on the far left, in the sky (small 1x text so they cover less of the game)
+    Text_Line #(.X0(6), .Y0(36),  .SCALE(1), .LEN(17), .TEXT("KEY 1  BOAT RIGHT"))
         TC1(pixel_x, pixel_y, ctl1_on);
-    Text_Line #(.X0(8), .Y0(58),  .SCALE(2), .LEN(11), .TEXT("KEY 2  LEFT"))
+    Text_Line #(.X0(6), .Y0(47),  .SCALE(1), .LEN(16), .TEXT("KEY 2  BOAT LEFT"))
         TC2(pixel_x, pixel_y, ctl2_on);
-    Text_Line #(.X0(8), .Y0(84),  .SCALE(2), .LEN(17), .TEXT("KEY 3  HOLD  DOWN"))
+    Text_Line #(.X0(6), .Y0(58),  .SCALE(1), .LEN(22), .TEXT("HOLD KEY 3  LOWER HOOK"))
         TC3(pixel_x, pixel_y, ctl3_on);
-    Text_Line #(.X0(8), .Y0(110), .SCALE(2), .LEN(20), .TEXT("KEY 3  RELEASE  REST"))
+    Text_Line #(.X0(6), .Y0(69),  .SCALE(1), .LEN(25), .TEXT("RELEASE KEY 3  RAISE HOOK"))
         TC4(pixel_x, pixel_y, ctl4_on);
+
+    // Points list on the far right, same style and fade as the controls.
+    // The trash line only shows on the hard level.
+    wire pts1_on, pts2_on, pts3_on, pts4_on, pts5_on, pts6_on;
+
+    Text_Line #(.X0(538), .Y0(36), .SCALE(1), .LEN(16), .TEXT("SMALL FISH    15"))
+        TP1(pixel_x, pixel_y, pts1_on);
+    Text_Line #(.X0(538), .Y0(47), .SCALE(1), .LEN(16), .TEXT("MEDIUM FISH   30"))
+        TP2(pixel_x, pixel_y, pts2_on);
+    Text_Line #(.X0(538), .Y0(58), .SCALE(1), .LEN(16), .TEXT("LARGE FISH    50"))
+        TP3(pixel_x, pixel_y, pts3_on);
+    Text_Line #(.X0(538), .Y0(69), .SCALE(1), .LEN(16), .TEXT("CHEST        100"))
+        TP4(pixel_x, pixel_y, pts4_on);
+    Text_Line #(.X0(538), .Y0(80), .SCALE(1), .LEN(16), .TEXT("SHARK        -50"))
+        TP5(pixel_x, pixel_y, pts5_on);
+    Text_Line #(.X0(538), .Y0(91), .SCALE(1), .LEN(16), .TEXT("TRASH        -15"))
+        TP6(pixel_x, pixel_y, pts6_on);
+
+    // headings over the two lists (2x, same red, same fade)
+    wire head_ctl_on, head_pts_on;
+    Text_Line #(.X0(6),   .Y0(18), .SCALE(2), .LEN(8), .TEXT("CONTROLS"))
+        TH1(pixel_x, pixel_y, head_ctl_on);
+    Text_Line #(.X0(538), .Y0(18), .SCALE(2), .LEN(6), .TEXT("POINTS"))
+        TH2(pixel_x, pixel_y, head_pts_on);
+
+    wire side_text_on = head_ctl_on || head_pts_on ||
+                        ctl1_on || ctl2_on || ctl3_on || ctl4_on ||
+                        pts1_on || pts2_on || pts3_on || pts4_on || pts5_on ||
+                        (pts6_on && hard_mode);
+
+    // "+15" style pop-up just left of the score sign, fades out quickly
+    wire popup_on, popup_sh, popup_bad;
+    wire [4:0] popup_a;
+    Score_Popup SP0(CLOCK_50, sys_rst_n, pop, pop_pts, eat_pop, pixel_x, pixel_y,
+                    popup_on, popup_sh, popup_a, popup_bad);
+
+    // Wooden banner behind the title (the score and timer signs hang from it)
+    wire banner_on;
+    wire [7:0] banner_r, banner_g, banner_b;
+    Title_Banner TB0(pixel_x, pixel_y, banner_on, banner_r, banner_g, banner_b);
 
     // ------------------------------------------------
     // Background and sprite drawing (later items are drawn on top)
@@ -367,16 +473,27 @@ module fin_it_to_win_it(
             red = 194; green = 178; blue = 128;
         end
 
+        // Coral (behind everything that moves)
+        if (cr0_op) begin red = cr0_r; green = cr0_g; blue = cr0_b; end
+        if (cr1_op) begin red = cr1_r; green = cr1_g; blue = cr1_b; end
+        if (cr2_op) begin red = cr2_r; green = cr2_g; blue = cr2_b; end
+        if (cr3_op) begin red = cr3_r; green = cr3_g; blue = cr3_b; end
+
         // Clouds (behind the text, the boat and the score board)
         if (cloud0_on || cloud1_on || cloud2_on || cloud3_on ||
             cloud4_on || cloud5_on || cloud6_on || cloud7_on) begin
             red = 8'd255; green = 8'd255; blue = 8'd255;
         end
 
-        // Controls (red) and title (orange with a dark blue shadow)
-        if (ctl1_on || ctl2_on || ctl3_on || ctl4_on) begin red = 8'd210; green = 8'd25; blue = 8'd25; end
-        if (title_shadow) begin red = 8'd35; green = 8'd75; blue = 8'd100; end
-        if (title_on)     begin red = 8'd255; green = 8'd140; blue = 8'd0; end
+        // Controls and points (red, fading out during play), banner and title (orange with a dark blue shadow)
+        if (side_text_on && ctl_alpha != 5'd0) begin
+            red   = blend(red,   8'd210, ctl_alpha);
+            green = blend(green, 8'd25,  ctl_alpha);
+            blue  = blend(blue,  8'd25,  ctl_alpha);
+        end
+        if (banner_on) begin red = banner_r; green = banner_g; blue = banner_b; end
+        if (title_shadow) begin red = 8'd70; green = 8'd35; blue = 8'd20; end    // dark brown shadow
+        if (title_on)     begin red = 8'd255; green = 8'd232; blue = 8'd170; end  // cream-gold, like the score sign
 
         if (boat_opaque) begin red = boat_red; green = boat_green; blue = boat_blue; end
 
@@ -388,13 +505,15 @@ module fin_it_to_win_it(
         if (fish5_opaque) begin red = fish5_red; green = fish5_green; blue = fish5_blue; end
 
         // Trash (hard level only)
-        if (hard_mode && tr0_op) begin red = tr0_r; green = tr0_g; blue = tr0_b; end
-        if (hard_mode && tr1_op) begin red = tr1_r; green = tr1_g; blue = tr1_b; end
-        if (hard_mode && tr2_op) begin red = tr2_r; green = tr2_g; blue = tr2_b; end
-        if (hard_mode && tr3_op) begin red = tr3_r; green = tr3_g; blue = tr3_b; end
+        // Trash fades in when it comes back (always solid while on the hook)
+        if (hard_mode && tr0_op) begin red = blend(red, tr0_r, t0_a); green = blend(green, tr0_g, t0_a); blue = blend(blue, tr0_b, t0_a); end
+        if (hard_mode && tr1_op) begin red = blend(red, tr1_r, t1_a); green = blend(green, tr1_g, t1_a); blue = blend(blue, tr1_b, t1_a); end
+        if (hard_mode && tr2_op) begin red = blend(red, tr2_r, t2_a); green = blend(green, tr2_g, t2_a); blue = blend(blue, tr2_b, t2_a); end
+        if (hard_mode && tr3_op) begin red = blend(red, tr3_r, t3_a); green = blend(green, tr3_g, t3_a); blue = blend(blue, tr3_b, t3_a); end
 
         if (shark_opaque) begin red = shark_red; green = shark_green; blue = shark_blue; end
-        if (chest_opaque) begin red = chest_red; green = chest_green; blue = chest_blue; end
+        // chest fades in when it comes back (always solid while on the hook)
+        if (chest_opaque) begin red = blend(red, chest_red, ch_a); green = blend(green, chest_green, ch_a); blue = blend(blue, chest_blue, ch_a); end
 
         // Hook on top of the items so you can see what it is holding
         if (hook_opaque) begin red = hook_red; green = hook_green; blue = hook_blue; end
@@ -405,6 +524,19 @@ module fin_it_to_win_it(
         // Timer sign (hangs from the score sign)
         if (timer_opaque) begin red = timer_r; green = timer_g; blue = timer_b; end
 
+        // points pop-up (white or red, with a dark shadow, fading out)
+        if (popup_sh) begin
+            red   = blend(red,   8'd35,  popup_a);
+            green = blend(green, 8'd60,  popup_a);
+            blue  = blend(blue,  8'd90,  popup_a);
+        end
+        if (popup_on) begin
+            // white for points gained, red for anything bad (lost points, EATEN)
+            red   = blend(red,   8'd255,                      popup_a);
+            green = blend(green, popup_bad ? 8'd60  : 8'd255, popup_a);
+            blue  = blend(blue,  popup_bad ? 8'd50  : 8'd255, popup_a);
+        end
+
         // Level menu (only before a level is chosen)
         if (!playing && menu_on) begin red = menu_r; green = menu_g; blue = menu_b; end
 
@@ -414,11 +546,37 @@ module fin_it_to_win_it(
     end
 
     // ------------------------------------------------
-    // VGA color outputs
+    // VGA outputs, registered
+    // The driver changes the pixel position at the same moment VGA_CLK rises,
+    // and the VGA chip reads the color on that same rising edge. With all the
+    // drawing logic above, the color may still be changing then, which shows
+    // up as static or a bad column. So:
+    //   step 1: right before the position changes (VGA_CLK low), save the
+    //           finished color and the sync/blank signals for that pixel.
+    //   step 2: half a pixel later (VGA_CLK high), copy them to the outputs.
+    // The VGA chip then reads values that have been steady for half a pixel.
+    // Colors and sync/blank are delayed the same amount, so the picture
+    // stays lined up.
     // ------------------------------------------------
 
-    assign VGA_R = red;
-    assign VGA_G = green;
-    assign VGA_B = blue;
+    reg [7:0] r1, g1, b1, r2, g2, b2;
+    reg hs1, vs1, bl1, hs2, vs2, bl2;
+
+    always @(posedge CLOCK_50) begin
+        if (!VGA_CLK) begin                  // the position changes at this edge
+            r1 <= red;  g1 <= green;  b1 <= blue;
+            hs1 <= hs_raw;  vs1 <= vs_raw;  bl1 <= blank_raw;
+        end else begin                       // half a pixel later
+            r2 <= r1;   g2 <= g1;     b2 <= b1;
+            hs2 <= hs1;     vs2 <= vs1;     bl2 <= bl1;
+        end
+    end
+
+    assign VGA_R = r2;
+    assign VGA_G = g2;
+    assign VGA_B = b2;
+    assign VGA_HS = hs2;
+    assign VGA_VS = vs2;
+    assign VGA_BLANK_N = bl2;
 
 endmodule
